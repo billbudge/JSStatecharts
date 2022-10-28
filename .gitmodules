@@ -1,0 +1,3 @@
+[submodule "JSAppFramework"]
+	path = JSAppFramework
+	url = https://github.com/billbudge/JSAppFramework.git

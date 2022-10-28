@@ -7,23 +7,18 @@
 </head>
 <body>
 
-
 <input type="text" id="text_input" size="20">
 
 <canvas id="test_canvas"></canvas>
 
-  <script src="base.js"></script>
-  <script src="collections.js"></script>
-  <script src="geometry.js"></script>
-  <script src="data_models.js"></script>
-  <script src="diagrams.js"></script>
-  <script src="shape_editors.js"></script>
-  <script src="statecharts.js"></script>
-  <script src="circuits.js"></script>
-  <script src="third_party/clipper.js"></script>
-  <script src="third_party/FileSaver.min.js"></script>
-  <script src="third_party/canvas2svg/canvas2svg.js"></script>
-
+<script src="base.js"></script>
+<script src="collections.js"></script>
+<script src="geometry.js"></script>
+<script src="data_models.js"></script>
+<script src="diagrams.js"></script>
+<script src="statecharts.js"></script>
+<script src="third_party/FileSaver.min.js"></script>
+<script src="third_party/canvas2svg/canvas2svg.js"></script>
 
 <script type="text/javascript" language="JavaScript">
 'use strict';
@@ -34,40 +29,17 @@ let ctx = canvas.getContext('2d');
 
 let textBox = document.getElementById('text_input');
 
-let theme = diagrams.theme.createDefault(),  // or createBlueprint
-    canvasController = new diagrams.CanvasController(canvas, ctx, theme),
-    textInputController = new diagrams.TextInputController(text_input, theme),
-    statechartModel = { root: statechart_data },
-    circuitModel = { root: circuit_data },
-    shapeModel = { root: shape_data };
+const theme = diagrams.theme.createDefault(),  // or createBlueprint
+      canvasController = new diagrams.CanvasController(canvas, ctx, theme),
+      textInputController = new diagrams.TextInputController(text_input, theme),
+      statechartModel = { root: statechart_data };
 
 document.bgColor = theme.bgColor;
 
-var statechartEditor = new statecharts.Editor(statechartModel, theme, textInputController),
-    circuitEditor = new circuits.Editor(circuitModel, theme, textInputController),
-    panZoomLayer = new diagrams.CanvasPanZoomLayer(),
-    shapeEditor = new shapes.Editor(shapeModel);
+const statechartEditor = new statecharts.Editor(statechartModel, theme, textInputController),
+      panZoomLayer = new diagrams.CanvasPanZoomLayer();
 
-var editorName = 'statecharts',
-    editor;
-
-function startEditor() {
-  switch (editorName) {
-    case 'statecharts':
-      editor = statechartEditor;
-      break;
-    case 'circuits':
-      editor = circuitEditor;
-      break;
-    case 'shapes':
-      editor = shapeEditor;
-      break;
-  }
-
-  canvasController.configure([panZoomLayer, editor]);
-}
-
-startEditor();
+canvasController.configure([panZoomLayer, statechartEditor]);
 
 function resizeCanvas() {
   canvasController.resize(window.innerWidth, window.innerHeight);
@@ -113,20 +85,7 @@ canvas.addEventListener("touchmove", onMouseMove);
 canvas.addEventListener('dblclick', onDoubleClick);
 
 document.addEventListener('keydown', function(e) {
-  if (e.keyCode == 85 && (e.ctrlKey || e.metaKey)) {  // command 'u'
-    switch (editorName) {
-      case 'shapes':
-        editorName = 'circuits';
-        break;
-      case 'circuits':
-        editorName = 'statecharts';
-        break;
-      case 'statecharts':
-        editorName = 'shapes';
-        break;
-    }
-    startEditor();
-  }
+  // Handle any keyboard commands for the app window here.
   canvasController.onKeyDown(e);
 });
 

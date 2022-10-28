@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Sandbox</title>
+  <link rel="shortcut icon" href="./favicon.ico">
+</head>
+<body>
+
+
+<input type="text" id="text_input" size="20">
+
+<canvas id="test_canvas"></canvas>
+
+  <script src="base.js"></script>
+  <script src="collections.js"></script>
+  <script src="geometry.js"></script>
+  <script src="data_models.js"></script>
+  <script src="diagrams.js"></script>
+  <script src="shape_editors.js"></script>
+  <script src="statecharts.js"></script>
+  <script src="circuits.js"></script>
+  <script src="third_party/clipper.js"></script>
+  <script src="third_party/FileSaver.min.js"></script>
+  <script src="third_party/canvas2svg/canvas2svg.js"></script>
+
+
+<script type="text/javascript" language="JavaScript">
+'use strict';
+
+// TODO remove these dangerous globals.
+let canvas = document.getElementById('test_canvas');
+let ctx = canvas.getContext('2d');
+
+let textBox = document.getElementById('text_input');
+
+let theme = diagrams.theme.createDefault(),  // or createBlueprint
+    canvasController = new diagrams.CanvasController(canvas, ctx, theme),
+    textInputController = new diagrams.TextInputController(text_input, theme),
+    statechartModel = { root: statechart_data },
+    circuitModel = { root: circuit_data },
+    shapeModel = { root: shape_data };
+
+document.bgColor = theme.bgColor;
+
+var statechartEditor = new statecharts.Editor(statechartModel, theme, textInputController),
+    circuitEditor = new circuits.Editor(circuitModel, theme, textInputController),
+    panZoomLayer = new diagrams.CanvasPanZoomLayer(),
+    shapeEditor = new shapes.Editor(shapeModel);
+
+var editorName = 'statecharts',
+    editor;
+
+function startEditor() {
+  switch (editorName) {
+    case 'statecharts':
+      editor = statechartEditor;
+      break;
+    case 'circuits':
+      editor = circuitEditor;
+      break;
+    case 'shapes':
+      editor = shapeEditor;
+      break;
+  }
+
+  canvasController.configure([panZoomLayer, editor]);
+}
+
+startEditor();
+
+function resizeCanvas() {
+  canvasController.resize(window.innerWidth, window.innerHeight);
+}
+
+resizeCanvas();
+
+window.onresize = resizeCanvas;
+
+window.onbeforeunload = function() {
+  return "Are you sure you want to navigate away?";
+}
+
+function onMouseDown(e) {
+  e.preventDefault();
+  canvasController.onMouseDown(e);
+}
+
+function onMouseMove(e) {
+  e.preventDefault();
+  canvasController.onMouseMove(e);
+}
+
+function onMouseUp(e) {
+  e.preventDefault();
+  canvasController.onMouseUp(e);
+}
+
+function onDoubleClick(e) {
+  canvasController.onDoubleClick(e);
+}
+
+canvas.addEventListener('mousedown', onMouseDown);
+canvas.addEventListener('mousemove', onMouseMove);
+canvas.addEventListener('mouseup', onMouseUp);
+
+canvas.addEventListener("touchstart", onMouseDown);
+canvas.addEventListener("touchend", onMouseUp);
+// canvas.addEventListener("touchcancel", handleCancel, false);
+// canvas.addEventListener("touchleave", handleEnd, false);
+canvas.addEventListener("touchmove", onMouseMove);
+
+canvas.addEventListener('dblclick', onDoubleClick);
+
+document.addEventListener('keydown', function(e) {
+  if (e.keyCode == 85 && (e.ctrlKey || e.metaKey)) {  // command 'u'
+    switch (editorName) {
+      case 'shapes':
+        editorName = 'circuits';
+        break;
+      case 'circuits':
+        editorName = 'statecharts';
+        break;
+      case 'statecharts':
+        editorName = 'shapes';
+        break;
+    }
+    startEditor();
+  }
+  canvasController.onKeyDown(e);
+});
+
+document.addEventListener('keyup', function(e) {
+  canvasController.onKeyUp(e);
+});
+
+</script>
+
+</body>
+</html>

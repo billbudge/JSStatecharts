@@ -971,7 +971,6 @@ Renderer.prototype.layoutStatechart = function(statechart) {
     observableModel.changeValue(statechart, 'width', xMax - xMin);
     observableModel.changeValue(statechart, 'height', yMax - yMin);
   }
-  console.log('statechart: ', statechart.width, statechart.height);
 }
 
 Renderer.prototype.layoutTransition = function(transition) {

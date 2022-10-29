@@ -2005,8 +2005,6 @@ Editor.prototype.onEndDrag = function(p) {
     // Reparent items.
     // TODO validity check and rollback transaction.
     selectionModel.contents().forEach(function(item) {
-      // if (isStatechart(parent) && !editingModel.canAddState(item, parent))
-      //   isValidTransaction = false;
       editingModel.addItem(item, parent);
     });
   }

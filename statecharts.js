@@ -707,6 +707,27 @@ const editingModel = (function() {
           self.deleteItem(item);
       });
     },
+
+    isValidStatechart: function(statechart) {
+      const self = this;
+      let startingStates = 0;
+      // A statechart is valid if its states and transitions are valid.
+      let isValid = statechart.items.every(function(item) {
+        if (isTransition(item)) {
+          return self.isValidTransition(self.getTransitionSrc(item),
+                                        self.getTransitionDst(item));
+        }
+        if (isStartingState(item)) {
+          startingStates++;
+        } else if (isState(item) && item.items) {
+          item.items.every(item => { return self.isValidStatechart(item); });
+        }
+        // All other items are valid.
+        return true;
+      });
+      // We have to allow no starting state as we build the statechart.
+      return isValid && startingStates <= 1;
+    },
   }
 
   function extend(model) {
@@ -1988,7 +2009,6 @@ Editor.prototype.onEndDrag = function(p) {
         editingModel = model.editingModel,
         mouseHitInfo = this.mouseHitInfo,
         dragItem = drag.item;
-  let isValidTransaction = true;
   if (isTransition(dragItem)) {
     dragItem[_p1] = dragItem[_p2] = undefined;
     const src = this.getTransitionSrc(dragItem),
@@ -2003,13 +2023,12 @@ Editor.prototype.onEndDrag = function(p) {
               isProperty(drag.item) ? isPropertyDropTarget : isStateDropTarget),
           parent = hitInfo ? hitInfo.item : statechart;
     // Reparent items.
-    // TODO validity check and rollback transaction.
     selectionModel.contents().forEach(function(item) {
       editingModel.addItem(item, parent);
     });
   }
 
-  if (isValidTransaction) {
+  if (editingModel.isValidStatechart(statechart)) {
     transactionModel.endTransaction();
   } else {
     transactionModel.cancelTransaction();

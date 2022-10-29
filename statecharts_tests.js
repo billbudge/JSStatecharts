@@ -316,6 +316,30 @@ const statechartTests = (function () {
     QUnit.assert.notOk(test.isValidTransition(start, start));
   });
 
+  QUnit.test("statecharts.editingModel.isValidStatechart", function() {
+    const test = newTestEditingModel(),
+          rootStatechart = test.model.root,
+          items = test.model.root.items;
+    // Empty statechart is valid.
+    QUnit.assert.ok(test.isValidStatechart(rootStatechart));
+    // Two states with a transition is valid.
+    const state1 = addState(test, newState()),
+          state2 = addState(test, newState()),
+          transition1 = addTransition(test, newTransition(state1, state2));
+    QUnit.assert.ok(test.isValidStatechart(rootStatechart));
+
+    // One start and one stop state is valid.
+    const start = addState(test, newPseudoState('start')),
+          stop = addState(test, newPseudoState('stop'));
+    QUnit.assert.ok(test.isValidStatechart(rootStatechart));
+
+    // Two start states is invalid.
+    const extraStart = addState(test, new newPseudoState('history'));
+    QUnit.assert.notOk(test.isValidStatechart(rootStatechart));
+
+    // TODO more tests.
+  });
+
   QUnit.test("statecharts.editingModel.transitionConsistency", function() {
     const test = newTestEditingModel(),
           items = test.model.root.items,

@@ -271,7 +271,22 @@ const statechartTests = (function () {
     QUnit.assert.ok(test.findChildStatechart(superState, state) === 0);
     QUnit.assert.ok(test.findChildStatechart(superState, start) === -1);
   });
-  
+ 
+    
+  QUnit.test("statecharts.editingModel.canAddTransition", function() {
+    const test = newTestEditingModel(),
+          items = test.model.root.items,
+          state1 = addState(test, newState()),
+          state2 = addState(test, newState()),
+          start = addState(test, newPseudoState('start')),
+          end = addState(test, newPseudoState('end'));
+
+    QUnit.assert.ok(test.canAddTransition(state1, state1));
+    QUnit.assert.ok(test.canAddTransition(state1, state2));
+    QUnit.assert.ok(test.canAddTransition(start, end));
+    QUnit.assert.notOk(test.canAddTransition(start, start));
+  });
+
   QUnit.test("statecharts.editingModel.transitionConsistency", function() {
     let test = newTestEditingModel(),
         items = test.model.root.items,
@@ -283,7 +298,7 @@ const statechartTests = (function () {
     test.deleteItem(state1);
     test.makeConsistent();
     QUnit.assert.ok(!items.includes(transition));
-  });
-  
+  });  
+
   })();
   

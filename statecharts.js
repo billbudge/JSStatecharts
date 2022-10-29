@@ -21,6 +21,10 @@ function isPseudostate(item) {
   return isStartState(item) || isStopState(item) || isHistoryState(item);
 }
 
+function isStartingState(item) {
+  return isStartState(item) || isHistoryState(item);
+}
+
 function isState(item) {
   return item.type === 'state' || isPseudostate(item);
 }
@@ -500,6 +504,11 @@ const editingModel = (function() {
       }
     },
 
+    canAddTransition: function(src, dst) {
+      // Pseudo-states can't transition to themselves.
+      return dst != src || !isPseudostate(src);
+    },
+
     addItem: function(item, parent, paletteItem) {
       const model = this.model,
             observableModel = model.observableModel,
@@ -956,11 +965,13 @@ Renderer.prototype.layoutStatechart = function(statechart) {
         observableModel.changeValue(item, 'y', item.y - yMin);
       }
     }
-    observableModel.changeValue(statechart, 'x', 0);
-    observableModel.changeValue(statechart, 'y', 0);
+    // observableModel.changeValue(statechart, 'x', 0);
+    // observableModel.changeValue(statechart, 'y', 0);
+    // Statechart position is calculated by the parent state layout.
     observableModel.changeValue(statechart, 'width', xMax - xMin);
     observableModel.changeValue(statechart, 'height', yMax - yMin);
   }
+  console.log('statechart: ', statechart.width, statechart.height);
 }
 
 Renderer.prototype.layoutTransition = function(transition) {
@@ -1428,33 +1439,6 @@ function Editor(model, theme, textInputController) {
   ];
 }
 
-/*
-    addTopLevelState_: function(item) {
-      let hierarchicalModel = this.model.hierarchicalModel,
-          statechart = this.statechart,
-          ancestor = item;
-      do {
-        item = ancestor;
-        ancestor = hierarchicalModel.getParent(ancestor);
-      } while (ancestor && ancestor !== statechart);
-
-      if (ancestor === statechart) {
-        this.changedTopLevelStates_.add(item);
-      }
-    },
-
-    update_: function (item) {
-      const self = this;
-      if (isState(item)) {
-        this.addTopLevelState_(item);
-      } else if (isStatechart(item)) {
-        this.addTopLevelState_(item);
-        item.items.forEach(subItem => self.update_(subItem));
-      }
-    },
-
-*/
-
 Editor.prototype.initialize = function(canvasController) {
   this.canvasController = canvasController;
   this.canvas = canvasController.canvas;
@@ -1898,6 +1882,7 @@ Editor.prototype.onDrag = function(p0, p) {
         transactionModel = model.transactionModel,
         referencingModel = model.referencingModel,
         selectionModel = model.selectionModel,
+        editingModel = model.editingModel,
         renderer = this.renderer,
         canvasController = this.canvasController,
         cp0 = canvasController.viewToCanvas(p0),
@@ -1935,37 +1920,42 @@ Editor.prototype.onDrag = function(p0, p) {
       if (mouseHitInfo.bottom)
         observableModel.changeValue(dragItem, 'height', snapshot.height + dy);
       break;
-    case connectTransitionSrc:
+    case connectTransitionSrc: {
+      const dst = referencingModel.getReference(dragItem, 'dstId');
       hitInfo = this.getFirstHit(hitList, isStateBorder);
       const srcId = hitInfo ? dataModel.getId(hitInfo.item) : 0;  // 0 is invalid id
-      observableModel.changeValue(dragItem, 'srcId', srcId);
-      const src = this.getTransitionSrc(dragItem);
-      if (src) {
-        const t1 = renderer.statePointToParam(src, cp);
+      if (srcId && editingModel.canAddTransition(hitInfo.item, dst)) {
+        observableModel.changeValue(dragItem, 'srcId', srcId);
+        const src = referencingModel.getReference(dragItem, 'srcId'),
+              t1 = renderer.statePointToParam(src, cp);
         observableModel.changeValue(dragItem, 't1', t1);
       } else {
+        observableModel.changeValue(dragItem, 'srcId', 0);
         // Change private property through model to update observers.
         observableModel.changeValue(dragItem, _p1, cp);
       }
       break;
-    case connectTransitionDst:
+    }
+    case connectTransitionDst: {
+      const src = referencingModel.getReference(dragItem, 'srcId');
       // Adjust position on src state to track the new transition.
       if (drag.newItem) {
-        const src = referencingModel.getReference(dragItem, 'srcId');
         observableModel.changeValue(dragItem, 't1', renderer.statePointToParam(src, cp));
       }
       hitInfo = this.getFirstHit(hitList, isStateBorder);
       const dstId = hitInfo ? dataModel.getId(hitInfo.item) : 0;  // 0 is invalid id
-      observableModel.changeValue(dragItem, 'dstId', dstId);
-      const dst = this.getTransitionDst(dragItem);
-      if (dst) {
-        const t2 = renderer.statePointToParam(dst, cp);
+      if (dstId && editingModel.canAddTransition(src, hitInfo.item)) {
+        observableModel.changeValue(dragItem, 'dstId', dstId);
+        const dst = referencingModel.getReference(dragItem, 'dstId'),
+              t2 = renderer.statePointToParam(dst, cp);
         observableModel.changeValue(dragItem, 't2', t2);
       } else {
+        observableModel.changeValue(dragItem, 'dstId', 0);
         // Change private property through model to update observers.
         observableModel.changeValue(dragItem, _p2, cp);
       }
       break;
+    }
     case moveTransitionPoint: {
       hitInfo = this.renderer.hitTest(dragItem, cp, this.hitTolerance, normalMode);
       if (hitInfo)

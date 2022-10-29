@@ -272,30 +272,56 @@ const statechartTests = (function () {
     QUnit.assert.ok(test.findChildStatechart(superState, start) === -1);
   });
  
-    
+  QUnit.test("statecharts.editingModel.canAddState", function() {
+    const test = newTestEditingModel(),
+          statechart = test.model.root,
+          items = statechart.items,
+          state1 = addState(test, newState()),
+          state2 = newState(),
+          start = newPseudoState('start'),
+          history1 = newPseudoState('history'),
+          history2 = newPseudoState('history*'),
+          stop = newPseudoState('stop');
+
+    QUnit.assert.ok(test.canAddState(state1, statechart));
+    QUnit.assert.ok(test.canAddState(state2, statechart));
+    QUnit.assert.ok(test.canAddState(start, statechart));
+    QUnit.assert.ok(test.canAddState(history1, statechart));
+    QUnit.assert.ok(test.canAddState(history2, statechart));
+    QUnit.assert.ok(test.canAddState(stop, statechart));
+    // Test that there can be only one starting state.
+    addState(test, start);
+    QUnit.assert.notOk(test.canAddState(newPseudoState('start'), statechart));
+    QUnit.assert.notOk(test.canAddState(history1, statechart));
+    QUnit.assert.notOk(test.canAddState(history2, statechart));
+    // Test that there can be multiple stop states.
+    addState(test, stop);
+    QUnit.assert.ok(test.canAddState(newPseudoState('stop'), statechart));
+  });
+
   QUnit.test("statecharts.editingModel.isValidTransition", function() {
     const test = newTestEditingModel(),
           items = test.model.root.items,
           state1 = addState(test, newState()),
           state2 = addState(test, newState()),
           start = addState(test, newPseudoState('start')),
-          end = addState(test, newPseudoState('end'));
+          stop = addState(test, newPseudoState('stop'));
 
     QUnit.assert.notOk(test.isValidTransition(undefined, undefined));
     QUnit.assert.notOk(test.isValidTransition(state1, undefined));
     QUnit.assert.notOk(test.isValidTransition(undefined, state1));
     QUnit.assert.ok(test.isValidTransition(state1, state1));
     QUnit.assert.ok(test.isValidTransition(state1, state2));
-    QUnit.assert.ok(test.isValidTransition(start, end));
+    QUnit.assert.ok(test.isValidTransition(start, stop));
     QUnit.assert.notOk(test.isValidTransition(start, start));
   });
 
   QUnit.test("statecharts.editingModel.transitionConsistency", function() {
-    let test = newTestEditingModel(),
-        items = test.model.root.items,
-        state1 = addState(test, newState()),
-        state2 = addState(test, newState()),
-        transition = addTransition(test, newTransition(state1, state2));
+    const test = newTestEditingModel(),
+          items = test.model.root.items,
+          state1 = addState(test, newState()),
+          state2 = addState(test, newState()),
+          transition = addTransition(test, newTransition(state1, state2));
   
     // Remove element and make sure dependent wire is also deleted.
     test.deleteItem(state1);
@@ -303,5 +329,5 @@ const statechartTests = (function () {
     QUnit.assert.ok(!items.includes(transition));
   });  
 
-  })();
+})();
   

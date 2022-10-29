@@ -484,30 +484,33 @@ const editingModel = (function() {
       }, this);
     },
 
+    isTopLevelStatechart: function(item) {
+      return isStatechart(item) && !this.getParent(item);
+    },
+
     // Returns a value indicating if the item can be added to the state
     // without violating statechart constraints.
-    canAddItemToStatechart: function(newItem, statechart) {
-      switch (newItem.type) {
-        case 'state':
-        case 'stop':          
-        case 'transition':
-          return true;
-        case 'start':
-        case 'history':
-        case 'history*': {
-          for (let item of statechart.items) {
-            if (item.type == newItem.type && item !== newItem)
-              return false;
-          }
-          return true;
-        }
+    canAddState: function(state, statechart) {
+      // The only constraint is that there can't be two starting states in a statechart.
+      if (!isStartingState(state))
+        return true;
+      for (let item of statechart.items) {
+        if (isStartingState(item) && item !== state)
+          return false;
       }
+      return true;
     },
 
     isValidTransition: function(src, dst) {
       if (!src || !dst) return false;
       // Pseudo-states can't transition to themselves.
-      return dst != src || !isPseudostate(src);
+      if (isPseudostate(src) && dst == src) return false;
+      // Transitions can't straddle sibling statecharts.
+      const srcParent = this.getParent(src),
+            srcGrandParent = this.getParent(srcParent),
+            dstParent = this.getParent(dst),
+            dstGrandParent = this.getParent(dstParent);
+      return srcParent == dstParent || srcGrandParent != dstGrandParent;
     },
 
     addItem: function(item, parent, paletteItem) {
@@ -523,8 +526,10 @@ const editingModel = (function() {
         if (isPseudostate(parent)) return;
         parent = this.findOrCreateChildStatechart(parent, item);
       } else if (isStatechart(parent)) {
-        if (!this.isTopLevelStatechart(parent) &&
-            !this.canAddItemToStatechart(item, parent)) {
+        // If adding a pseudostate to a non-root statechart, add a new statechart to hold it.
+        // We allow the exception for the root statechart so we can drag and drop between
+        // child statecharts.
+        if (!this.canAddState(item, parent) && !this.isTopLevelStatechart(parent)) {
           const superState = hierarchicalModel.getParent(parent);
           parent = this.findOrCreateChildStatechart(superState, item);
         }
@@ -583,15 +588,10 @@ const editingModel = (function() {
       this.model.observableModel.changeValue(item, attr, value);
     },
 
-    isTopLevelStatechart: function(item) {
-      return isStatechart(item) &&
-             !this.model.hierarchicalModel.getParent(item);
-    },
-
     findChildStatechart: function(state, newItem) {
       if (state.items) {
         for (let i = 0; i < state.items.length; i++) {
-          if (this.canAddItemToStatechart(newItem, state.items[i]))
+          if (this.canAddState(newItem, state.items[i]))
             return i;
         }
       }
@@ -1993,7 +1993,8 @@ Editor.prototype.onEndDrag = function(p) {
     dragItem[_p1] = dragItem[_p2] = undefined;
     const src = this.getTransitionSrc(dragItem),
           dst = this.getTransitionDst(dragItem);
-    isValidTransaction = editingModel.isValidTransition(src, dst);
+    if (!editingModel.isValidTransition(src, dst))
+      isValidTransaction = false;
   } else if (drag.type == copyPaletteItem || drag.type === moveSelection ||
              drag.type === moveCopySelection) {
     // Find state beneath mouse.
@@ -2004,6 +2005,8 @@ Editor.prototype.onEndDrag = function(p) {
     // Reparent items.
     // TODO validity check and rollback transaction.
     selectionModel.contents().forEach(function(item) {
+      // if (isStatechart(parent) && !editingModel.canAddState(item, parent))
+      //   isValidTransaction = false;
       editingModel.addItem(item, parent);
     });
   }

@@ -273,7 +273,7 @@ const statechartTests = (function () {
   });
  
     
-  QUnit.test("statecharts.editingModel.canAddTransition", function() {
+  QUnit.test("statecharts.editingModel.isValidTransition", function() {
     const test = newTestEditingModel(),
           items = test.model.root.items,
           state1 = addState(test, newState()),
@@ -281,10 +281,13 @@ const statechartTests = (function () {
           start = addState(test, newPseudoState('start')),
           end = addState(test, newPseudoState('end'));
 
-    QUnit.assert.ok(test.canAddTransition(state1, state1));
-    QUnit.assert.ok(test.canAddTransition(state1, state2));
-    QUnit.assert.ok(test.canAddTransition(start, end));
-    QUnit.assert.notOk(test.canAddTransition(start, start));
+    QUnit.assert.notOk(test.isValidTransition(undefined, undefined));
+    QUnit.assert.notOk(test.isValidTransition(state1, undefined));
+    QUnit.assert.notOk(test.isValidTransition(undefined, state1));
+    QUnit.assert.ok(test.isValidTransition(state1, state1));
+    QUnit.assert.ok(test.isValidTransition(state1, state2));
+    QUnit.assert.ok(test.isValidTransition(start, end));
+    QUnit.assert.notOk(test.isValidTransition(start, start));
   });
 
   QUnit.test("statecharts.editingModel.transitionConsistency", function() {

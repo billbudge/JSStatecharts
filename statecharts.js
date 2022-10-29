@@ -504,7 +504,8 @@ const editingModel = (function() {
       }
     },
 
-    canAddTransition: function(src, dst) {
+    isValidTransition: function(src, dst) {
+      if (!src || !dst) return false;
       // Pseudo-states can't transition to themselves.
       return dst != src || !isPseudostate(src);
     },
@@ -690,7 +691,6 @@ const editingModel = (function() {
           return;
         }
         // Make sure transitions belong to lowest common statechart.
-        // TODO no transitions into start state, out of end state.
         const srcParent = hierarchicalModel.getParent(src),
               dstParent = hierarchicalModel.getParent(dst),
               lca = hierarchicalModel.getLowestCommonAncestor(srcParent, dstParent);
@@ -1481,6 +1481,8 @@ Editor.prototype.updateLayout_ = function() {
         changedItems = this.changedItems_;
   // Render containers before transitions, so they are consistent with the
   // updated dimensions of states.
+  // This function is called during the draw and hitTest methods, so the renderer
+  // is open with a context set.
   changedItems.forEach(
     item => { if (!isTransition(item)) renderer.layout(item); });
   changedItems.forEach(
@@ -1604,7 +1606,8 @@ Editor.prototype.print = function() {
   ctx.translate(-bounds.x, -bounds.y);
 
   renderer.begin(ctx);
-  this.updateLayout_();
+  // We shouldn't need to layout any changed items here.
+  assert(!this.changedItems_.size);
   canvasController.applyTransform();
 
   visitItems(statechart.items, function(item) {
@@ -1927,7 +1930,7 @@ Editor.prototype.onDrag = function(p0, p) {
       const dst = referencingModel.getReference(dragItem, 'dstId');
       hitInfo = this.getFirstHit(hitList, isStateBorder);
       const srcId = hitInfo ? dataModel.getId(hitInfo.item) : 0;  // 0 is invalid id
-      if (srcId && editingModel.canAddTransition(hitInfo.item, dst)) {
+      if (srcId && editingModel.isValidTransition(hitInfo.item, dst)) {
         observableModel.changeValue(dragItem, 'srcId', srcId);
         const src = referencingModel.getReference(dragItem, 'srcId'),
               t1 = renderer.statePointToParam(src, cp);
@@ -1947,7 +1950,7 @@ Editor.prototype.onDrag = function(p0, p) {
       }
       hitInfo = this.getFirstHit(hitList, isStateBorder);
       const dstId = hitInfo ? dataModel.getId(hitInfo.item) : 0;  // 0 is invalid id
-      if (dstId && editingModel.canAddTransition(src, hitInfo.item)) {
+      if (dstId && editingModel.isValidTransition(src, hitInfo.item)) {
         observableModel.changeValue(dragItem, 'dstId', dstId);
         const dst = referencingModel.getReference(dragItem, 'dstId'),
               t2 = renderer.statePointToParam(dst, cp);
@@ -1985,8 +1988,12 @@ Editor.prototype.onEndDrag = function(p) {
         editingModel = model.editingModel,
         mouseHitInfo = this.mouseHitInfo,
         dragItem = drag.item;
+  let isValidTransaction = true;
   if (isTransition(dragItem)) {
     dragItem[_p1] = dragItem[_p2] = undefined;
+    const src = this.getTransitionSrc(dragItem),
+          dst = this.getTransitionDst(dragItem);
+    isValidTransaction = editingModel.isValidTransition(src, dst);
   } else if (drag.type == copyPaletteItem || drag.type === moveSelection ||
              drag.type === moveCopySelection) {
     // Find state beneath mouse.
@@ -1995,12 +2002,17 @@ Editor.prototype.onEndDrag = function(p) {
               isProperty(drag.item) ? isPropertyDropTarget : isStateDropTarget),
           parent = hitInfo ? hitInfo.item : statechart;
     // Reparent items.
+    // TODO validity check and rollback transaction.
     selectionModel.contents().forEach(function(item) {
       editingModel.addItem(item, parent);
     });
   }
 
-  model.transactionModel.endTransaction();
+  if (isValidTransaction) {
+    transactionModel.endTransaction();
+  } else {
+    transactionModel.cancelTransaction();
+  }
 
   this.setEditableText();
 
@@ -2018,7 +2030,10 @@ Editor.prototype.onBeginHover = function(p) {
         hoverHitInfo = this.getFirstHit(hitList, isDraggable);
   if (!hoverHitInfo)
     return false;
-  hoverHitInfo.p = p;
+  const canvasController = this.canvasController,
+        cp = canvasController.viewToCanvas(p);
+
+  hoverHitInfo.p = cp;
   this.hoverHitInfo = hoverHitInfo;
   return true;
 }

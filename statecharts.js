@@ -503,14 +503,15 @@ const editingModel = (function() {
 
     isValidTransition: function(src, dst) {
       if (!src || !dst) return false;
-      // Pseudo-states can't transition to themselves.
-      if (isPseudostate(src) && dst == src) return false;
-      // Transitions can't straddle sibling statecharts.
-      const srcParent = this.getParent(src),
-            srcGrandParent = this.getParent(srcParent),
-            dstParent = this.getParent(dst),
-            dstGrandParent = this.getParent(dstParent);
-      return srcParent == dstParent || srcGrandParent != dstGrandParent;
+      // States, but not Pseudostates may transition to themselves.
+      if (src == dst) {
+        return !isPseudostate(src);
+      }
+      // Transitions can't straddle sibling statecharts. The lowest common ancestor
+      // or src and dst must be a statechart, not a state.
+      const hierarchicalModel = this.model.hierarchicalModel,
+            lca = hierarchicalModel.getLowestCommonAncestor(src, dst);
+      return isStatechart(lca);
     },
 
     addItem: function(item, parent, paletteItem) {
@@ -720,7 +721,7 @@ const editingModel = (function() {
         if (isStartingState(item)) {
           startingStates++;
         } else if (isState(item) && item.items) {
-          item.items.every(item => { return self.isValidStatechart(item); });
+          return item.items.every(item => { return self.isValidStatechart(item); });
         }
         // All other items are valid.
         return true;
@@ -2013,8 +2014,6 @@ Editor.prototype.onEndDrag = function(p) {
     dragItem[_p1] = dragItem[_p2] = undefined;
     const src = this.getTransitionSrc(dragItem),
           dst = this.getTransitionDst(dragItem);
-    if (!editingModel.isValidTransition(src, dst))
-      isValidTransaction = false;
   } else if (drag.type == copyPaletteItem || drag.type === moveSelection ||
              drag.type === moveCopySelection) {
     // Find state beneath mouse.

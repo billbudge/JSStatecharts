@@ -503,9 +503,14 @@ const editingModel = (function() {
 
     isValidTransition: function(src, dst) {
       if (!src || !dst) return false;
-      // States, but not Pseudostates may transition to themselves.
-      if (src == dst) {
-        return !isPseudostate(src);
+        // States, but not pseudostates can't transition to themselves.
+        if (src == dst) return !isPseudostate(src);
+      if (isPseudostate(src) || isPseudostate(dst)) {
+        const srcParent = this.getParent(src),
+              dstParent = this.getParent(dst);
+        // Pseudostates are local to the statechart. No transitions to or from outside.
+        if (srcParent != dstParent) return false;
+        return !isStartingState(dst) && !isStopState(src); 
       }
       // Transitions can't straddle sibling statecharts. The lowest common ancestor
       // or src and dst must be a statechart, not a state.

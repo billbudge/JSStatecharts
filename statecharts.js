@@ -53,10 +53,6 @@ function isNonTransition(item) {
   return !isTransition(item);
 }
 
-function isProperty(item) {
-  return item.type === 'event' || item.type === 'guard' || item.type === 'action';
-}
-
 // Visit in pre-order.
 function visitItem(item, fn, filter) {
   if (!filter || filter(item)) {
@@ -331,8 +327,6 @@ const statechartModel = (function() {
         this.insertTransition_(item);
       } else if (isStatechart(item)) {
         this.insertStatechart_(item);
-      } else if (isProperty(item)) {
-        this.insertProperty_(item);
       }
     },
 
@@ -343,8 +337,6 @@ const statechartModel = (function() {
         this.removeTransition_(item);
       } else if (isStatechart(item)) {
         this.removeStatechart_(item);
-      } else if (isProperty(item)) {
-        this.removeProperty_(item);
       }
     },
 
@@ -539,9 +531,6 @@ const editingModel = (function() {
           const superState = hierarchicalModel.getParent(parent);
           parent = this.findOrCreateChildStatechart(superState, item);
         }
-      } else if (isTransition(parent)) {
-        if (!isProperty(item))
-          parent = hierarchicalModel.getParent(parent);
       }
       // At this point we can add item to parent.
       if (isState(item)) {
@@ -556,14 +545,8 @@ const editingModel = (function() {
       if (oldParent)
         this.deleteItem(item);
 
-      if (isProperty(item) && isTransition(parent)) {
-        // For transition properties, delete the item and assign to transition.
-        this.deleteItem(item);
-        observableModel.changeValue(parent, item.type, item);
-      } else {
-        let attr = paletteItem ? 'palette' : 'items';
-        observableModel.insertElement(parent, attr, parent[attr].length, item);
-      }
+      let attr = paletteItem ? 'palette' : 'items';
+      observableModel.insertElement(parent, attr, parent[attr].length, item);
       return item;
     },
 
@@ -619,7 +602,6 @@ const editingModel = (function() {
 
     getLabel: function (item) {
       if (isTrueState(item)) return item.name;
-      else if (isProperty(item)) return item.text;
     },
 
     doDelete: function() {
@@ -1596,7 +1578,7 @@ Editor.prototype.onChanged_ = function(change) {
       if (attr == 'x' || attr == 'y' || attr == 'width' || attr == 'height') {
         // Visit item and sub-items to layout all affected transitions.
         visitItem(item, addItems);
-      } else if (isTransition(item) || isProperty(item)) {
+      } else if (isTransition(item)) {
         addItems(item);
       }
       break;
@@ -1743,12 +1725,6 @@ function isStateDropTarget(hitInfo, model) {
         palette = model.root.palette;
   return !palette.includes(item) &&
          isTrueStateOrStatechart(item) &&
-         !model.hierarchicalModel.isItemInSelection(item);
-}
-
-function isPropertyDropTarget(hitInfo, model) {
-  const item = hitInfo.item;
-  return isTransition(item) &&
          !model.hierarchicalModel.isItemInSelection(item);
 }
 
@@ -1939,8 +1915,7 @@ Editor.prototype.onDrag = function(p0, p) {
     case copyPaletteItem:
     case moveCopySelection:
     case moveSelection:
-      hitInfo = this.getFirstHit(hitList,
-          isProperty(drag.item) ? isPropertyDropTarget : isStateDropTarget);
+      hitInfo = this.getFirstHit(hitList, isStateDropTarget);
       selectionModel.forEach(function(item) {
         const snapshot = transactionModel.getSnapshot(item);
         if (snapshot && isNonTransition(item)) {
@@ -2033,8 +2008,7 @@ Editor.prototype.onEndDrag = function(p) {
              drag.type === moveCopySelection) {
     // Find state beneath mouse.
     const hitList = this.hitTest(p),
-          hitInfo = this.getFirstHit(hitList,
-              isProperty(drag.item) ? isPropertyDropTarget : isStateDropTarget),
+          hitInfo = this.getFirstHit(hitList, isStateDropTarget),
           parent = hitInfo ? hitInfo.item : statechart;
     // Reparent items.
     selectionModel.contents().forEach(function(item) {

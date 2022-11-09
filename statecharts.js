@@ -1402,38 +1402,33 @@ function Editor(model, theme, propertyGridController) {
   ];
 
   // Register property grid layouts.
-  function handler(info, value) {
-    const model = self.model,
-          canvasController = self.canvasController,
-          item = model.selectionModel.lastSelected();
-    let attr,
-        description;
+  function getAttr(info) {
     switch (info.label) {
       case 'name':
-        attr = 'name';
-        description = 'rename state';
-        break;
+        return 'name';
       case 'entry':
-        attr = 'entry';
-        description = 'change entry action';
-        break;
+        return 'entry';
       case 'exit':
-        attr = 'exit';
-        description = 'change exit action';
-        break;
+        return 'exit';
       case 'event':
-        attr = 'event';
-        description = 'change transition event';
-        break;
+        return 'event';
       case 'guard':
-        attr = 'guard';
-        description = 'change transition guard';
-        break;
+        return 'guard';
       case 'action':
-        attr = 'action';
-        description = 'change transition action';
-        break;
+        return 'action';
     }
+  }
+  function getter(info, item) {
+    const attr = getAttr(info);
+    if (!item) return '';
+    return item[attr] || '';
+  }
+  function setter(info, item, value) {
+    const model = self.model,
+          canvasController = self.canvasController;
+    if (!item) return;
+    const attr = getAttr(info),
+          description = 'change ' + attr;
     model.transactionModel.beginTransaction(description);
     model.observableModel.changeValue(item, attr, value);
     model.transactionModel.endTransaction();
@@ -1444,17 +1439,20 @@ function Editor(model, theme, propertyGridController) {
       {
         label: 'name',
         type: 'text',
-        handler: handler,
+        getter: getter,
+        setter: setter,
       },
       {
         label: 'entry',
         type: 'text',
-        handler: handler,
+        getter: getter,
+        setter: setter,
       },
       {
         label: 'exit',
         type: 'text',
-        handler: handler,
+        getter: getter,
+        setter: setter,
       },
     ]);
   propertyGridController.register('transition',
@@ -1462,18 +1460,21 @@ function Editor(model, theme, propertyGridController) {
     {
       label: 'event',
       type: 'text',
-      handler: handler,
-    },
+      getter: getter,
+      setter: setter,
+  },
     {
       label: 'guard',
       type: 'text',
-      handler: handler,
-    },
+      getter: getter,
+      setter: setter,
+  },
     {
       label: 'action',
       type: 'text',
-      handler: handler,
-    },
+      getter: getter,
+      setter: setter,
+  },
   ]);
 }
 

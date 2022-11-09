@@ -5,11 +5,9 @@
   <title>Sandbox</title>
   <link rel="shortcut icon" href="./favicon.ico">
 </head>
-<body>
+<body id="body">
 
-<input type="text" id="text_input" size="20" style="position:relative;"/>
-
-<canvas id="test_canvas"></canvas>
+<canvas id="test_canvas" style="position:relative"></canvas>
 
 <script src="JSAppFramework/base.js"></script>
 <script src="JSAppFramework/collections.js"></script>
@@ -24,19 +22,18 @@
 'use strict';
 
 // TODO remove these dangerous globals.
-let canvas = document.getElementById('test_canvas');
+let body = document.getElementById('body'),
+    canvas = document.getElementById('test_canvas');
 let ctx = canvas.getContext('2d');
 
-let textBox = document.getElementById('text_input');
-
-const theme = diagrams.theme.createDefault(),  // or createBlueprint
+const statechartModel = { root: statechart_data },
+      theme = diagrams.theme.createDefault(),  // or createBlueprint
       canvasController = new diagrams.CanvasController(canvas, ctx, theme),
-      textInputController = new diagrams.TextInputController(text_input, theme),
-      statechartModel = { root: statechart_data };
+      propertyGridController = new diagrams.PropertyGridController(body, theme);
 
 document.bgColor = theme.bgColor;
 
-const statechartEditor = new statecharts.Editor(statechartModel, theme, textInputController),
+const statechartEditor = new statecharts.Editor(statechartModel, theme, propertyGridController),
       panZoomLayer = new diagrams.CanvasPanZoomLayer();
 
 canvasController.configure([panZoomLayer, statechartEditor]);

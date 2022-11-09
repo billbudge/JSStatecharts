@@ -907,24 +907,6 @@ Renderer.prototype.getNextStatechartY = function(state) {
   return y;
 }
 
-// Layout a property item.
-Renderer.prototype.layoutProperty = function(property) {
-  const ctx = this.ctx, theme = this.theme;
-  let text = property.text;
-  switch (property.type) {
-    case 'event':
-      break;
-    case 'guard':
-      text = '[' + text + ']';
-      break;
-    case 'action':
-      text = '/' + text;
-      break;
-  }
-  property[_text] = text;
-  property[_textWidth] = ctx.measureText(text).width + 2 * theme.padding;
-}
-
 // Layout a state.
 Renderer.prototype.layoutState = function(state) {
   const self = this,
@@ -992,6 +974,7 @@ Renderer.prototype.layoutStatechart = function(statechart) {
         observableModel.changeValue(item, 'y', item.y - yMin);
       }
     }
+    // TODO clean up statechart layout.
     // observableModel.changeValue(statechart, 'x', 0);
     // observableModel.changeValue(statechart, 'y', 0);
     // Statechart position is calculated by the parent state layout.
@@ -1028,20 +1011,22 @@ Renderer.prototype.layoutTransition = function(transition) {
   }
   transition[_bezier] = diagrams.getEdgeBezier(p1, p2);
   transition[_pt] = geometry.evaluateBezier(transition[_bezier], transition.pt);
-  let text = '';
+  let text = '',
+      textWidth = 0;
   if (transition.event) {
-    this.layoutProperty(transition.event);
-    text += transition.event[_text];
+    text += transition.event;
+    textWidth += ctx.measureText(transition.event).width + 2 * theme.padding;
   }
   if (transition.guard) {
-    this.layoutProperty(transition.guard);
-    text += transition.guard[_text];
+    text += '[' + transition.guard + ']';
+    textWidth += ctx.measureText(transition.guard).width + 2 * theme.padding;
   }
   if (transition.action) {
-    this.layoutProperty(transition.action);
-    text += transition.action[_text];
+    text += '/' + transition.action;
+    textWidth += ctx.measureText(transition.action).width + 2 * theme.padding;
   }
   transition[_text] = text;
+  transition[_textWidth] = textWidth;
 }
 
 // Layout a statechart item.
@@ -1050,8 +1035,6 @@ Renderer.prototype.layout = function(item) {
     this.layoutState(item);
   } else if (isStatechart(item)) {
     this.layoutStatechart(item);
-  } else if (isProperty(item)) {
-    this.layoutProperty(item);
   } else if (isTransition(item))
     this.layoutTransition(item);
 }
@@ -1231,44 +1214,44 @@ Renderer.prototype.hitTestStatechart = function(statechart, p, tol, mode) {
   return diagrams.hitTestRect(x, y, w, h, p, tol); // TODO hitTestRoundRect
 }
 
-Renderer.prototype.drawProperty = function(property, mode) {
-  const ctx = this.ctx, theme = this.theme, r = theme.radius,
-        rect = this.getItemRect(property),
-        x = rect.x, y = rect.y, w = rect.width, h = rect.height,
-        textSize = theme.fontSize,
-        lineBase = y + textSize;// + theme.textLeading;
-  ctx.beginPath();
-  ctx.rect(x, y, w, h);
-  switch (mode) {
-    case normalMode:
-    case printMode:
-      ctx.fillStyle = theme.bgColor;
-      ctx.fill();
-      ctx.lineWidth = 0.25;
-      ctx.stroke();
-      ctx.fillStyle = theme.textColor;
-      ctx.fillText(property[_text], x + theme.padding, lineBase);
-      break;
-    case highlightMode:
-      ctx.strokeStyle = theme.highlightColor;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      break;
-    case hotTrackMode:
-      ctx.strokeStyle = theme.hotTrackColor;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      break;
-  }
-}
+// Renderer.prototype.drawProperty = function(property, mode) {
+//   const ctx = this.ctx, theme = this.theme, r = theme.radius,
+//         rect = this.getItemRect(property),
+//         x = rect.x, y = rect.y, w = rect.width, h = rect.height,
+//         textSize = theme.fontSize,
+//         lineBase = y + textSize;// + theme.textLeading;
+//   ctx.beginPath();
+//   ctx.rect(x, y, w, h);
+//   switch (mode) {
+//     case normalMode:
+//     case printMode:
+//       ctx.fillStyle = theme.bgColor;
+//       ctx.fill();
+//       ctx.lineWidth = 0.25;
+//       ctx.stroke();
+//       ctx.fillStyle = theme.textColor;
+//       ctx.fillText(property[_text], x + theme.padding, lineBase);
+//       break;
+//     case highlightMode:
+//       ctx.strokeStyle = theme.highlightColor;
+//       ctx.lineWidth = 2;
+//       ctx.stroke();
+//       break;
+//     case hotTrackMode:
+//       ctx.strokeStyle = theme.hotTrackColor;
+//       ctx.lineWidth = 2;
+//       ctx.stroke();
+//       break;
+//   }
+// }
 
-Renderer.prototype.hitTestProperty = function(property, p, tol, mode) {
-  const theme = this.theme,
-        r = theme.radius,
-        rect = this.getItemRect(property),
-        x = rect.x, y = rect.y, w = rect.width, h = rect.height;
-  return diagrams.hitTestRect(x, y, w, h, p, tol);
-}
+// Renderer.prototype.hitTestProperty = function(property, p, tol, mode) {
+//   const theme = this.theme,
+//         r = theme.radius,
+//         rect = this.getItemRect(property),
+//         x = rect.x, y = rect.y, w = rect.width, h = rect.height;
+//   return diagrams.hitTestRect(x, y, w, h, p, tol);
+// }
 
 Renderer.prototype.drawTransition = function(transition, mode) {
   const ctx = this.ctx,
@@ -1330,11 +1313,6 @@ Renderer.prototype.draw = function(item, mode) {
     case 'statechart':
       this.drawStatechart(item, mode);
       break;
-    case 'event':
-    case 'guard':
-    case 'action':
-      this.drawProperty(item, mode);
-      break;
   }
 }
 
@@ -1355,11 +1333,6 @@ Renderer.prototype.hitTest = function(item, p, tol, mode) {
       break;
     case 'statechart':
       hitInfo = this.hitTestStatechart(item, p, tol, mode);
-      break;
-    case 'event':
-    case 'guard':
-    case 'action':
-      hitInfo = this.hitTestProperty(item, p, tol, mode);
       break;
   }
   if (hitInfo)
@@ -1394,11 +1367,11 @@ Renderer.prototype.drawHoverText = function(item, p) {
 
 //------------------------------------------------------------------------------
 
-function Editor(model, theme, textInputController) {
+function Editor(model, theme, propertyGridController) {
   const self = this;
   this.model = model;
   this.statechart = model.root;
-  this.textInputController = textInputController;
+  this.propertyGridController = propertyGridController;
 
   this.theme = extendTheme(theme);
 
@@ -1444,25 +1417,82 @@ function Editor(model, theme, textInputController) {
       height: 60,
       name: 'New State',
     },
-    {
-      type: 'event',
-      x: 8,
-      y: 100,
-      text: 'Event',
-    },
-    {
-      type: 'guard',
-      x: 8,
-      y: 132,
-      text: 'Cond',
-    },
-    {
-      type: 'action',
-      x: 8,
-      y: 164,
-      text: 'Action',
-    },
   ];
+
+  // Register property grid layouts.
+  function handler(info, value) {
+    const model = self.model,
+          canvasController = self.canvasController,
+          item = model.selectionModel.lastSelected();
+    let attr,
+        description;
+    switch (info.label) {
+      case 'name':
+        attr = 'name';
+        description = 'rename state';
+        break;
+      case 'entry':
+        attr = 'entry';
+        description = 'change entry action';
+        break;
+      case 'exit':
+        attr = 'exit';
+        description = 'change exit action';
+        break;
+      case 'event':
+        attr = 'event';
+        description = 'change transition event';
+        break;
+      case 'guard':
+        attr = 'guard';
+        description = 'change transition guard';
+        break;
+      case 'action':
+        attr = 'action';
+        description = 'change transition action';
+        break;
+    }
+    model.transactionModel.beginTransaction(description);
+    model.observableModel.changeValue(item, attr, value);
+    model.transactionModel.endTransaction();
+    canvasController.draw();
+  }
+  propertyGridController.register('state',
+    [
+      {
+        label: 'name',
+        type: 'text',
+        handler: handler,
+      },
+      {
+        label: 'entry',
+        type: 'text',
+        handler: handler,
+      },
+      {
+        label: 'exit',
+        type: 'text',
+        handler: handler,
+      },
+    ]);
+  propertyGridController.register('transition',
+  [
+    {
+      label: 'event',
+      type: 'text',
+      handler: handler,
+    },
+    {
+      label: 'guard',
+      type: 'text',
+      handler: handler,
+    },
+    {
+      label: 'action',
+      type: 'text',
+      handler: handler,
+    },
+  ]);
 }
 
 Editor.prototype.initialize = function(canvasController) {
@@ -1722,28 +1752,11 @@ function isPropertyDropTarget(hitInfo, model) {
          !model.hierarchicalModel.isItemInSelection(item);
 }
 
-Editor.prototype.setEditableText = function() {
-  let model = this.model,
-      canvasController = this.canvasController,
-      textInputController = this.textInputController,
-      item = model.selectionModel.lastSelected(),
-      editingModel = model.editingModel;
-  let attr;
-  if (item && isTrueState(item)) attr = 'name';
-  else if (item && isProperty(item)) attr = 'text';
-  if (attr) {
-    const oldText = item[attr];
-    textInputController.start(oldText, function(newText) {
-      if (newText !== oldText) {
-        model.transactionModel.beginTransaction('rename');
-        model.observableModel.changeValue(item, attr, newText);
-        model.transactionModel.endTransaction();
-        canvasController.draw();
-      }
-    });
-  } else {
-    textInputController.clear();
-  }
+Editor.prototype.setPropertyGrid = function() {
+  const model = this.model,
+        item = model.selectionModel.lastSelected(),
+        type = item ? item.type : undefined;
+  this.propertyGridController.show(type, item);
 }
 
 Editor.prototype.isPaletteItem = function(item) {
@@ -1775,7 +1788,7 @@ Editor.prototype.onClick = function(p) {
       selectionModel.clear();
     }
   }
-  this.setEditableText();
+  this.setPropertyGrid();
   return mouseHitInfo !== null;
 }
 
@@ -1820,9 +1833,6 @@ Editor.prototype.onBeginDrag = function(p0) {
       case 'stop':
       case 'history':
       case 'history*':
-      case 'event':
-      case 'guard':
-      case 'action':
         if (mouseHitInfo.inPalette) {
           drag = {
             type: copyPaletteItem,
@@ -2038,7 +2048,7 @@ Editor.prototype.onEndDrag = function(p) {
     transactionModel.cancelTransaction();
   }
 
-  this.setEditableText();
+  this.setPropertyGrid();
 
   this.drag = null;
   this.mouseHitInfo = null;

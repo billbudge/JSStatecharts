@@ -1196,45 +1196,6 @@ Renderer.prototype.hitTestStatechart = function(statechart, p, tol, mode) {
   return diagrams.hitTestRect(x, y, w, h, p, tol); // TODO hitTestRoundRect
 }
 
-// Renderer.prototype.drawProperty = function(property, mode) {
-//   const ctx = this.ctx, theme = this.theme, r = theme.radius,
-//         rect = this.getItemRect(property),
-//         x = rect.x, y = rect.y, w = rect.width, h = rect.height,
-//         textSize = theme.fontSize,
-//         lineBase = y + textSize;// + theme.textLeading;
-//   ctx.beginPath();
-//   ctx.rect(x, y, w, h);
-//   switch (mode) {
-//     case normalMode:
-//     case printMode:
-//       ctx.fillStyle = theme.bgColor;
-//       ctx.fill();
-//       ctx.lineWidth = 0.25;
-//       ctx.stroke();
-//       ctx.fillStyle = theme.textColor;
-//       ctx.fillText(property[_text], x + theme.padding, lineBase);
-//       break;
-//     case highlightMode:
-//       ctx.strokeStyle = theme.highlightColor;
-//       ctx.lineWidth = 2;
-//       ctx.stroke();
-//       break;
-//     case hotTrackMode:
-//       ctx.strokeStyle = theme.hotTrackColor;
-//       ctx.lineWidth = 2;
-//       ctx.stroke();
-//       break;
-//   }
-// }
-
-// Renderer.prototype.hitTestProperty = function(property, p, tol, mode) {
-//   const theme = this.theme,
-//         r = theme.radius,
-//         rect = this.getItemRect(property),
-//         x = rect.x, y = rect.y, w = rect.width, h = rect.height;
-//   return diagrams.hitTestRect(x, y, w, h, p, tol);
-// }
-
 Renderer.prototype.drawTransition = function(transition, mode) {
   const ctx = this.ctx,
         theme = this.theme,
@@ -1535,6 +1496,9 @@ Editor.prototype.updateBounds_ = function() {
         renderer = this.renderer,
         changedTopLevelStates = this.changedTopLevelStates_;
   renderer.begin(ctx);
+  // Update any changed items first. We don't want to layout statecharts after
+  // their parent state is updated.
+  this.updateLayout_();
   changedTopLevelStates.forEach(
     state => reverseVisitItem(state, item => renderer.layout(item), isStateOrStatechart));
   renderer.end();

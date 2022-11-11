@@ -50,34 +50,28 @@ window.onbeforeunload = function() {
   return "Are you sure you want to navigate away?";
 }
 
-function onMouseDown(e) {
+function onPointerDown(e) {
   e.preventDefault();
-  canvasController.onMouseDown(e);
+  canvasController.onPointerDown(e);
 }
 
-function onMouseMove(e) {
+function onPointerMove(e) {
   e.preventDefault();
-  canvasController.onMouseMove(e);
+  canvasController.onPointerMove(e);
 }
 
-function onMouseUp(e) {
+function onPointerUp(e) {
   e.preventDefault();
-  canvasController.onMouseUp(e);
+  canvasController.onPointerUp(e);
 }
 
 function onDoubleClick(e) {
   canvasController.onDoubleClick(e);
 }
 
-canvas.addEventListener('mousedown', onMouseDown);
-canvas.addEventListener('mousemove', onMouseMove);
-canvas.addEventListener('mouseup', onMouseUp);
-
-canvas.addEventListener("touchstart", onMouseDown);
-canvas.addEventListener("touchend", onMouseUp);
-// canvas.addEventListener("touchcancel", handleCancel, false);
-// canvas.addEventListener("touchleave", handleEnd, false);
-canvas.addEventListener("touchmove", onMouseMove);
+canvas.addEventListener('pointerdown', onPointerDown);
+canvas.addEventListener('pointermove', onPointerMove);
+canvas.addEventListener('pointerup', onPointerUp);
 
 canvas.addEventListener('dblclick', onDoubleClick);
 

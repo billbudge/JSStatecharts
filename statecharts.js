@@ -1210,10 +1210,11 @@ Renderer.prototype.drawTransition = function(transition, mode) {
       ctx.stroke();
       let src = this.getTransitionSrc(transition);
       if (src && !isPseudostate(src) && mode !== printMode) {
-        const pt = transition[_pt];
-        diagrams.roundRectPath(pt.x - theme.radius,
-                               pt.y - theme.radius,
-                               16, 16, theme.radius, ctx);
+        const pt = transition[_pt],
+              r = theme.radius / 2;
+        diagrams.roundRectPath(pt.x - r,
+                               pt.y - r,
+                               theme.radius, theme.radius, r, ctx);
         ctx.fillStyle = theme.bgColor;
         ctx.fill();
         ctx.lineWidth = 0.25;

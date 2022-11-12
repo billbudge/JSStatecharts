@@ -1505,10 +1505,12 @@ Editor.prototype.updateBounds_ = function() {
   changedTopLevelStates.clear();
   // Make sure the canvas is large enough to contain the root statechart.
   const canvasController = this.canvasController,
-        canvasSize = canvasController.getSize(),
-        width = statechart.width,
-        height =statechart.height;
+        canvasSize = canvasController.getSize();
+  let width = statechart.width,
+      height =statechart.height;
   if (width > canvasSize.width || height > canvasSize.height) {
+    width = Math.max(width, canvasSize.width);
+    height = Math.max(height, canvasSize.height);
     canvasController.setSize(width, height);
   }
 }

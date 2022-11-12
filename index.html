@@ -37,14 +37,7 @@ const statechartEditor = new statecharts.Editor(statechartModel, theme, property
       panZoomLayer = new diagrams.CanvasPanZoomLayer();
 
 canvasController.configure([panZoomLayer, statechartEditor]);
-
-function resizeCanvas() {
-  canvasController.resize(window.innerWidth, window.innerHeight);
-}
-
-resizeCanvas();
-
-window.onresize = resizeCanvas;
+canvasController.setSize(window.innerWidth, window.innerHeight);
 
 window.onbeforeunload = function() {
   return "Are you sure you want to navigate away?";

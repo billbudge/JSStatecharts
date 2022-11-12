@@ -767,13 +767,16 @@ function Renderer(model, theme) {
   this.theme = extendTheme(theme);
 
   const translatableModel = model.translatableModel,
-        referencingModel = model.referencingModel;
+        referencingModel = model.referencingModel,
+        hierarchicalModel = model.hierarchicalModel;
 
   assert(translatableModel);
   assert(referencingModel);
+  assert(hierarchicalModel);
 
   this.translatableModel = translatableModel;
   this.referencingModel = referencingModel;
+  this.hierarchicalModel = hierarchicalModel;
 
   this.getTransitionSrc = referencingModel.getReferenceFn('srcId');
   this.getTransitionDst = referencingModel.getReferenceFn('dstId');
@@ -826,12 +829,20 @@ Renderer.prototype.getSize = function(item) {
   return { width: width, height: height };
 }
 
-Renderer.prototype.getItemRect = function (item) {
+Renderer.prototype.getItemBounds = function (item) {
   const size = this.getSize(item),
         translatableModel = this.model.translatableModel,
         x = translatableModel.globalX(item),
         y = translatableModel.globalY(item);
 
+  if (isStatechart(item)) {
+    // Non-root Statechart bounds are expanded to fill the parent state.
+    const parent = this.hierarchicalModel.getParent(item);
+    if (parent) {
+      const parentSize = this.getSize(parent);
+      size.width = Math.max(size.width, parentSize.width);
+    }
+  }
   return { x: x, y: y, width: size.width, height: size.height };
 }
 
@@ -853,7 +864,7 @@ Renderer.prototype.getBounds = function(items) {
 
 Renderer.prototype.statePointToParam = function(state, p) {
   const r = this.theme.radius,
-        rect = this.getItemRect(state);
+        rect = this.getItemBounds(state);
   if (isTrueState(state))
     return diagrams.rectPointToParam(rect.x, rect.y, rect.width, rect.height, p);
 
@@ -862,7 +873,7 @@ Renderer.prototype.statePointToParam = function(state, p) {
 
 Renderer.prototype.stateParamToPoint = function(state, t) {
   const r = this.theme.radius,
-        rect = this.getItemRect(state);
+        rect = this.getItemBounds(state);
   if (isTrueState(state))
     return diagrams.roundRectParamToPoint(rect.x, rect.y, rect.width, rect.height, r, t);
 
@@ -898,7 +909,6 @@ Renderer.prototype.layoutState = function(state) {
       height = Math.max(state.height, theme.stateMinHeight);
 
   const statecharts = state.items;
-  let statechartOffsetY = 0;
   if (statecharts && statecharts.length > 0) {
     // Layout the child statecharts vertically within the parent state.
     // TODO handle horizontal flow.
@@ -909,13 +919,12 @@ Renderer.prototype.layoutState = function(state) {
     let statechartOffsetY = 0;
     statecharts.forEach(function(statechart) {
       observableModel.changeValue(statechart, 'y', statechartOffsetY);
-      observableModel.changeValue(statechart, 'width', width);
       statechartOffsetY += statechart.height;
     });
 
     height = Math.max(height, statechartOffsetY);
 
-    // Expand the last statechart to fill its parent state.
+    // Expand the last statechart to fill the parent state.
     const lastStatechart = statecharts[statecharts.length - 1];
     observableModel.changeValue(lastStatechart, 'height',
           lastStatechart.height + height - statechartOffsetY);
@@ -928,7 +937,7 @@ Renderer.prototype.layoutState = function(state) {
 }
 
 // Make sure a statechart is big enough to enclose its contents. Statecharts
-// are always sized automatically.
+// are never sized manually.
 Renderer.prototype.layoutStatechart = function(statechart) {
   const padding = this.theme.padding,
         items = statechart.items;
@@ -956,10 +965,7 @@ Renderer.prototype.layoutStatechart = function(statechart) {
         observableModel.changeValue(item, 'y', item.y - yMin);
       }
     }
-    // TODO clean up statechart layout.
-    // observableModel.changeValue(statechart, 'x', 0);
-    // observableModel.changeValue(statechart, 'y', 0);
-    // Statechart position is calculated by the parent state layout.
+    // Statechart position is determined during parent state layout.
     observableModel.changeValue(statechart, 'width', xMax - xMin);
     observableModel.changeValue(statechart, 'height', yMax - yMin);
   }
@@ -979,7 +985,7 @@ Renderer.prototype.layoutTransition = function(transition) {
           nx = (p2.x - p1.x) / length,
           ny = (p2.y - p1.y) / length,
           radius = self.theme.radius,
-          bbox = self.getItemRect(pseudoState);
+          bbox = self.getItemBounds(pseudoState);
     p1.x = bbox.x + bbox.width / 2 + nx * radius;
     p1.y = bbox.y + bbox.height / 2 + ny * radius;
     p1.nx = nx;
@@ -1023,7 +1029,7 @@ Renderer.prototype.layout = function(item) {
 
 Renderer.prototype.drawState = function(state, mode) {
   const ctx = this.ctx, theme = this.theme, r = theme.radius,
-        rect = this.getItemRect(state),
+        rect = this.getItemBounds(state),
         x = rect.x, y = rect.y, w = rect.width, h = rect.height,
         knobbyRadius = theme.knobbyRadius, textSize = theme.fontSize,
         lineBase = y + textSize + theme.textLeading;
@@ -1079,7 +1085,7 @@ Renderer.prototype.drawState = function(state, mode) {
 
 Renderer.prototype.hitTestState = function(state, p, tol, mode) {
   const theme = this.theme, r = theme.radius,
-        rect = this.getItemRect(state),
+        rect = this.getItemBounds(state),
         x = rect.x, y = rect.y, w = rect.width, h = rect.height,
         result = diagrams.hitTestRect(x, y, w, h, p, tol); // TODO hitTestRoundRect
   if (result) {
@@ -1092,7 +1098,7 @@ Renderer.prototype.hitTestState = function(state, p, tol, mode) {
 
 Renderer.prototype.drawPseudoState = function(state, mode) {
   const ctx = this.ctx, theme = this.theme, r = theme.radius,
-        rect = this.getItemRect(state),
+        rect = this.getItemBounds(state),
         x = rect.x, y = rect.y,
         cx = x + r, cy = y + r;
   function drawGlyph(glyph, cx, cy) {
@@ -1162,7 +1168,7 @@ Renderer.prototype.drawPseudoState = function(state, mode) {
 Renderer.prototype.hitTestPseudoState = function(state, p, tol, mode) {
   const theme = this.theme,
         r = theme.radius,
-        rect = this.getItemRect(state),
+        rect = this.getItemBounds(state),
         x = rect.x, y = rect.y;
   if (!isStopState(state) && hitTestArrow(this, x + 2 * r + theme.arrowSize, y + r, p, tol))
     return { arrow: true };
@@ -1178,7 +1184,7 @@ Renderer.prototype.drawStatechart = function(statechart, mode) {
       break;
     case hotTrackMode:
       const ctx = this.ctx, theme = this.theme, r = theme.radius,
-            rect = this.getItemRect(statechart),
+            rect = this.getItemBounds(statechart),
             x = rect.x, y = rect.y, w = rect.width, h = rect.height;
       diagrams.roundRectPath(x, y, w, h, r, ctx);
       ctx.strokeStyle = theme.hotTrackColor;
@@ -1191,7 +1197,7 @@ Renderer.prototype.drawStatechart = function(statechart, mode) {
 Renderer.prototype.hitTestStatechart = function(statechart, p, tol, mode) {
   const theme = this.theme,
         r = theme.radius,
-        rect = this.getItemRect(statechart),
+        rect = this.getItemBounds(statechart),
         x = rect.x, y = rect.y, w = rect.width, h = rect.height;
   return diagrams.hitTestRect(x, y, w, h, p, tol); // TODO hitTestRoundRect
 }
@@ -1497,9 +1503,6 @@ Editor.prototype.updateBounds_ = function() {
         renderer = this.renderer,
         changedTopLevelStates = this.changedTopLevelStates_;
   renderer.begin(ctx);
-  // Update any changed items first. We don't want to layout statecharts after
-  // their parent state is updated.
-  this.updateLayout_();
   changedTopLevelStates.forEach(
     state => reverseVisitItem(state, item => renderer.layout(item), isStateOrStatechart));
   renderer.end();

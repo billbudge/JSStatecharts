@@ -267,21 +267,23 @@ const statechartTests = (function () {
           state1 = addItem(test, newState()),
           state2 = newState(),
           start = newPseudoState('start'),
-          history1 = newPseudoState('history'),
-          history2 = newPseudoState('history*'),
+          shallowHistory = newPseudoState('history'),
+          deepHistory = newPseudoState('history*'),
           stop = newPseudoState('stop');
 
     QUnit.assert.ok(test.canAddState(state1, statechart));
     QUnit.assert.ok(test.canAddState(state2, statechart));
     QUnit.assert.ok(test.canAddState(start, statechart));
-    QUnit.assert.ok(test.canAddState(history1, statechart));
-    QUnit.assert.ok(test.canAddState(history2, statechart));
+    QUnit.assert.ok(test.canAddState(shallowHistory, statechart));
+    QUnit.assert.ok(test.canAddState(deepHistory, statechart));
     QUnit.assert.ok(test.canAddState(stop, statechart));
     // Test that there can be only one starting state.
     addItem(test, start);
     QUnit.assert.notOk(test.canAddState(newPseudoState('start'), statechart));
-    QUnit.assert.notOk(test.canAddState(history1, statechart));
-    QUnit.assert.notOk(test.canAddState(history2, statechart));
+    QUnit.assert.ok(test.canAddState(shallowHistory, statechart));
+    QUnit.assert.ok(test.canAddState(deepHistory, statechart));
+    addItem(test, shallowHistory);
+    QUnit.assert.ok(test.canAddState(deepHistory, statechart));
     // Test that there can be multiple stop states.
     addItem(test, stop);
     QUnit.assert.ok(test.canAddState(newPseudoState('stop'), statechart));
@@ -293,7 +295,9 @@ const statechartTests = (function () {
           state1 = addItem(test, newState()),
           state2 = addItem(test, newState()),
           start = addItem(test, newPseudoState('start')),
-          stop = addItem(test, newPseudoState('stop'));
+          stop = addItem(test, newPseudoState('stop')),
+          shallowHistory = addItem(test, newPseudoState('history')),
+          deepHistory = addItem(test, newPseudoState('history*'));
 
     // Test transitions within a statechart.
     QUnit.assert.notOk(test.isValidTransition(undefined, undefined));
@@ -303,8 +307,9 @@ const statechartTests = (function () {
     QUnit.assert.ok(test.isValidTransition(state1, state2));
     QUnit.assert.ok(test.isValidTransition(start, stop));
     QUnit.assert.notOk(test.isValidTransition(start, start));
+    QUnit.assert.ok(test.isValidTransition(start, shallowHistory));
+    QUnit.assert.ok(test.isValidTransition(start, deepHistory));
     QUnit.assert.notOk(test.isValidTransition(stop, stop));
-    QUnit.assert.notOk(test.isValidTransition(start, start));
   
     // Convert state1 to a superstate with two sub-statecharts.
     const start1 = addItem(test, newPseudoState('start'), state1),
@@ -334,12 +339,20 @@ const statechartTests = (function () {
     QUnit.assert.ok(test.isValidStatechart(rootStatechart));
 
     // One start and one stop state is valid.
-    const start = addItem(test, newPseudoState('start')),
-          stop = addItem(test, newPseudoState('stop'));
+    addItem(test, newPseudoState('start'));
+    addItem(test, newPseudoState('stop'));
+    QUnit.assert.ok(test.isValidStatechart(rootStatechart));
+
+    // Multiple history pseudostates can be added.
+    addItem(test, newPseudoState('history'));
+    addItem(test, newPseudoState('history'));
+    QUnit.assert.ok(test.isValidStatechart(rootStatechart));
+    addItem(test, newPseudoState('history*'));
+    addItem(test, newPseudoState('history*'));
     QUnit.assert.ok(test.isValidStatechart(rootStatechart));
 
     // Two start states is invalid.
-    const extraStart = addItem(test, new newPseudoState('history'));
+    addItem(test, new newPseudoState('start'));
     QUnit.assert.notOk(test.isValidStatechart(rootStatechart));
 
     // TODO more tests.

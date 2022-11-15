@@ -483,11 +483,11 @@ const editingModel = (function() {
     // Returns a value indicating if the item can be added to the state
     // without violating statechart constraints.
     canAddState: function(state, statechart) {
-      // The only constraint is that there can't be two starting states in a statechart.
-      if (!isStartingState(state))
+      // The only constraint is that there can't be two start states in a statechart.
+      if (!isStartState(state))
         return true;
       for (let item of statechart.items) {
-        if (isStartingState(item) && item !== state)
+        if (isStartState(item) && item !== state)
           return false;
       }
       return true;
@@ -495,14 +495,14 @@ const editingModel = (function() {
 
     isValidTransition: function(src, dst) {
       if (!src || !dst) return false;
-        // States, but not pseudostates can't transition to themselves.
+        // Only true states can transition to themselves.
         if (src == dst) return !isPseudostate(src);
       if (isPseudostate(src) || isPseudostate(dst)) {
         const srcParent = this.getParent(src),
               dstParent = this.getParent(dst);
         // Pseudostates are local to the statechart. No transitions to or from outside.
         if (srcParent != dstParent) return false;
-        return !isStartingState(dst) && !isStopState(src); 
+        return !isStartState(dst) && !isStopState(src); 
       }
       // Transitions can't straddle sibling statecharts. The lowest common ancestor
       // or src and dst must be a statechart, not a state.
@@ -705,7 +705,7 @@ const editingModel = (function() {
           return self.isValidTransition(self.getTransitionSrc(item),
                                         self.getTransitionDst(item));
         }
-        if (isStartingState(item)) {
+        if (isStartState(item)) {
           startingStates++;
         } else if (isState(item) && item.items) {
           return item.items.every(item => { return self.isValidStatechart(item); });

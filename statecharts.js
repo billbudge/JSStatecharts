@@ -495,17 +495,20 @@ const editingModel = (function() {
 
     isValidTransition: function(src, dst) {
       if (!src || !dst) return false;
-        // Only true states can transition to themselves.
-        if (src == dst) return !isPseudostate(src);
-      if (isPseudostate(src) || isPseudostate(dst)) {
+      // No transition to self for pseudostates.
+      if (src == dst) return !isPseudostate(src);
+      // No transitions to a start pseudostate.
+      if (isStartState(dst)) return false;
+      // No transitions from a stop pseudostate.
+      if (isStopState(src)) return false;
+      // No transitions out of parent state for start or history pseudostates.
+      if (isStartingState(src)) {
         const srcParent = this.getParent(src),
               dstParent = this.getParent(dst);
-        // Pseudostates are local to the statechart. No transitions to or from outside.
-        if (srcParent != dstParent) return false;
-        return !isStartState(dst) && !isStopState(src); 
+        return srcParent == dstParent; 
       }
-      // Transitions can't straddle sibling statecharts. The lowest common ancestor
-      // or src and dst must be a statechart, not a state.
+      // Transitions can't straddle parallel statecharts. The lowest common ancestor
+      // of src and dst must be a statechart, not a state.
       const hierarchicalModel = this.model.hierarchicalModel,
             lca = hierarchicalModel.getLowestCommonAncestor(src, dst);
       return isStatechart(lca);

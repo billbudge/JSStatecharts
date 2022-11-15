@@ -307,9 +307,13 @@ const statechartTests = (function () {
     QUnit.assert.ok(test.isValidTransition(state1, state2));
     QUnit.assert.ok(test.isValidTransition(start, stop));
     QUnit.assert.notOk(test.isValidTransition(start, start));
+    QUnit.assert.notOk(test.isValidTransition(stop, stop));
+    QUnit.assert.notOk(test.isValidTransition(shallowHistory, shallowHistory));
+    QUnit.assert.notOk(test.isValidTransition(deepHistory, deepHistory));
+    QUnit.assert.notOk(test.isValidTransition(stop, state1));
+    QUnit.assert.notOk(test.isValidTransition(state1, start));
     QUnit.assert.ok(test.isValidTransition(start, shallowHistory));
     QUnit.assert.ok(test.isValidTransition(start, deepHistory));
-    QUnit.assert.notOk(test.isValidTransition(stop, stop));
   
     // Convert state1 to a superstate with two sub-statecharts.
     const start1 = addItem(test, newPseudoState('start'), state1),

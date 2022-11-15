@@ -7,7 +7,7 @@
 </head>
 <body id="body">
 
-<canvas id="test_canvas" style="position:relative"></canvas>
+<canvas id="canvas" style="position:relative"></canvas>
 
 <script src="JSAppFramework/base.js"></script>
 <script src="JSAppFramework/collections.js"></script>
@@ -20,62 +20,61 @@
 
 <script type="text/javascript" language="JavaScript">
 'use strict';
+(function() {
 
-// TODO remove these dangerous globals.
-let body = document.getElementById('body'),
-    canvas = document.getElementById('test_canvas');
-let ctx = canvas.getContext('2d');
+  const body = document.getElementById('body'),
+        canvas = document.getElementById('canvas'),
+        ctx = canvas.getContext('2d'),
+        statechartModel = { root: statechart_data },
+        theme = diagrams.theme.createDefault(),  // or createBlueprint
+        canvasController = new diagrams.CanvasController(canvas, ctx, theme),
+        propertyGridController = new diagrams.PropertyGridController(body, theme),
+        statechartEditor = new statecharts.Editor(statechartModel, theme, propertyGridController),
+        panZoomLayer = new diagrams.CanvasPanZoomLayer();
 
-const statechartModel = { root: statechart_data },
-      theme = diagrams.theme.createDefault(),  // or createBlueprint
-      canvasController = new diagrams.CanvasController(canvas, ctx, theme),
-      propertyGridController = new diagrams.PropertyGridController(body, theme);
+  document.bgColor = theme.bgColor;
 
-document.bgColor = theme.bgColor;
+  canvasController.configure([panZoomLayer, statechartEditor]);
+  canvasController.setSize(window.innerWidth, window.innerHeight);
 
-const statechartEditor = new statecharts.Editor(statechartModel, theme, propertyGridController),
-      panZoomLayer = new diagrams.CanvasPanZoomLayer();
+  window.onbeforeunload = function() {
+    return "Are you sure you want to navigate away?";
+  }
 
-canvasController.configure([panZoomLayer, statechartEditor]);
-canvasController.setSize(window.innerWidth, window.innerHeight);
+  function onPointerDown(e) {
+    e.preventDefault();
+    canvasController.onPointerDown(e);
+  }
 
-window.onbeforeunload = function() {
-  return "Are you sure you want to navigate away?";
-}
+  function onPointerMove(e) {
+    e.preventDefault();
+    canvasController.onPointerMove(e);
+  }
 
-function onPointerDown(e) {
-  e.preventDefault();
-  canvasController.onPointerDown(e);
-}
+  function onPointerUp(e) {
+    e.preventDefault();
+    canvasController.onPointerUp(e);
+  }
 
-function onPointerMove(e) {
-  e.preventDefault();
-  canvasController.onPointerMove(e);
-}
+  function onDoubleClick(e) {
+    canvasController.onDoubleClick(e);
+  }
 
-function onPointerUp(e) {
-  e.preventDefault();
-  canvasController.onPointerUp(e);
-}
+  canvas.addEventListener('pointerdown', onPointerDown);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerup', onPointerUp);
 
-function onDoubleClick(e) {
-  canvasController.onDoubleClick(e);
-}
+  canvas.addEventListener('dblclick', onDoubleClick);
 
-canvas.addEventListener('pointerdown', onPointerDown);
-canvas.addEventListener('pointermove', onPointerMove);
-canvas.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('keydown', function(e) {
+    // Handle any keyboard commands for the app window here.
+    canvasController.onKeyDown(e);
+  });
 
-canvas.addEventListener('dblclick', onDoubleClick);
-
-document.addEventListener('keydown', function(e) {
-  // Handle any keyboard commands for the app window here.
-  canvasController.onKeyDown(e);
-});
-
-document.addEventListener('keyup', function(e) {
-  canvasController.onKeyUp(e);
-});
+  document.addEventListener('keyup', function(e) {
+    canvasController.onKeyUp(e);
+  });
+})();
 
 </script>
 

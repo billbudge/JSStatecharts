@@ -997,15 +997,15 @@ Renderer.prototype.layoutTransition = function(transition) {
       textWidth = 0;
   if (transition.event) {
     text += transition.event;
-    textWidth += ctx.measureText(transition.event).width + 2 * theme.padding;
+    textWidth += this.ctx.measureText(transition.event).width + 2 * this.theme.padding;
   }
   if (transition.guard) {
     text += '[' + transition.guard + ']';
-    textWidth += ctx.measureText(transition.guard).width + 2 * theme.padding;
+    textWidth += this.ctx.measureText(transition.guard).width + 2 * this.theme.padding;
   }
   if (transition.action) {
     text += '/' + transition.action;
-    textWidth += ctx.measureText(transition.action).width + 2 * theme.padding;
+    textWidth += this.ctx.measureText(transition.action).width + 2 * this.theme.padding;
   }
   transition[_text] = text;
   transition[_textWidth] = textWidth;
@@ -1285,7 +1285,7 @@ Renderer.prototype.hitTest = function(item, p, tol, mode) {
 }
 
 Renderer.prototype.drawHoverText = function(item, p) {
-  const self = this, theme = this.theme,
+  const self = this, theme = this.theme, ctx = this.ctx,
         props = [];
   this.model.dataModel.visitProperties(item, function(item, attr) {
     const value = item[attr];

@@ -88,7 +88,11 @@ const _bezier = Symbol('bezier'),
       _p2 = Symbol('p2'),
       _pt = Symbol('pt'),  // transition attachment point;
       _text = Symbol('text'),
-      _textWidth = Symbol('textWidth');
+      _textWidth = Symbol('textWidth'),
+      _entryText = Symbol('entryText'),
+      _entryY = Symbol('entryY'),
+      _exitText = Symbol('exitText'),
+      _exitY = Symbol('exitY');
 
 function extendTheme(theme) {
   const r = 8,
@@ -103,7 +107,7 @@ function extendTheme(theme) {
     padding: 8,
 
     stateMinWidth: 100,
-    stateMinHeight: 60,
+    stateMinHeight: 60,  // TODO make sure there's room for entry/exit action text
 
     // Rather than try to render actual text for H and H* into the pseudostate disk,
     // render the glyphs as moveto/lineto pairs.
@@ -896,12 +900,16 @@ Renderer.prototype.getNextStatechartY = function(state) {
 Renderer.prototype.layoutState = function(state) {
   const self = this,
         theme = this.theme,
+        textSize = theme.fontSize,
+        textLeading = theme.textLeading,
+        lineSpacing = textSize + textLeading,
         observableModel = this.model.observableModel;
-  let width = Math.max(state.width, theme.stateMinWidth),
-      height = Math.max(state.height, theme.stateMinHeight);
+
+  let width = 0,
+      height = lineSpacing;
 
   const statecharts = state.items;
-  let statechartOffsetY = 0;
+  let stateOffsetY = 0;  // start at the top of the state shape.
   if (statecharts && statecharts.length > 0) {
     // Layout the child statecharts vertically within the parent state.
     // TODO handle horizontal flow.
@@ -909,21 +917,32 @@ Renderer.prototype.layoutState = function(state) {
       const size = self.getSize(statechart);
       width = Math.max(width, size.width);
     });
-    let statechartOffsetY = 0;
     statecharts.forEach(function(statechart) {
-      observableModel.changeValue(statechart, 'y', statechartOffsetY);
+      observableModel.changeValue(statechart, 'y', stateOffsetY);
       observableModel.changeValue(statechart, 'width', width);
-      statechartOffsetY += statechart.height;
+      stateOffsetY += statechart.height;
     });
 
-    height = Math.max(height, statechartOffsetY);
-
+    height = Math.max(height, stateOffsetY);
     // Expand the last statechart to fill its parent state.
     const lastStatechart = statecharts[statecharts.length - 1];
     observableModel.changeValue(lastStatechart, 'height',
-          lastStatechart.height + height - statechartOffsetY);
-
+          lastStatechart.height + height - stateOffsetY);
   }
+  if (state.entry) {
+    state[_entryText] = 'entry/ ' + state.entry;
+    state[_entryY] = height;
+    height += lineSpacing;
+    width = Math.max(width, this.ctx.measureText(state[_entryText]).width + 2 * this.theme.padding);
+  }
+  if (state.exit) {
+    state[_exitText] = 'exit/ ' + state.exit;
+    state[_exitY] = height;
+    height += lineSpacing;
+    width = Math.max(width, this.ctx.measureText(state[_exitText]).width + 2 * this.theme.padding);
+  }
+  width = Math.max(width, theme.stateMinWidth);
+  height = Math.max(height, theme.stateMinHeight);
   width = Math.max(width, state.width);
   height = Math.max(height, state.height);
   observableModel.changeValue(state, 'width', width);
@@ -1025,7 +1044,7 @@ Renderer.prototype.drawState = function(state, mode) {
   const ctx = this.ctx, theme = this.theme, r = theme.radius,
         rect = this.getItemRect(state),
         x = rect.x, y = rect.y, w = rect.width, h = rect.height,
-        knobbyRadius = theme.knobbyRadius, textSize = theme.fontSize,
+        textSize = theme.fontSize,
         lineBase = y + textSize + theme.textLeading;
   diagrams.roundRectPath(x, y, w, h, r, ctx);
   switch (mode) {
@@ -1043,6 +1062,8 @@ Renderer.prototype.drawState = function(state, mode) {
 
       ctx.fillStyle = theme.textColor;
       ctx.fillText(state.name, x + r, y + textSize);
+      ctx.fillText(state[_entryText], x + r, y + state[_entryY] + textSize);
+      ctx.fillText(state[_exitText], x + r, y + state[_exitY] + textSize);
 
       const items = state.items;
       if (items) {

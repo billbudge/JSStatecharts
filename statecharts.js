@@ -823,12 +823,6 @@ Renderer.prototype.getSize = function(item) {
     case 'history*':
       width = height = 2 * this.theme.radius;
       break;
-    case 'event':
-    case 'guard':
-    case 'action':
-      height = this.theme.fontSize + this.theme.padding;
-      width = item[_textWidth];
-      break;
   }
   return { width: width, height: height };
 }
@@ -839,6 +833,7 @@ Renderer.prototype.getItemRect = function (item) {
         x = translatableModel.globalX(item),
         y = translatableModel.globalY(item);
 
+  // TODO statecharts should get width/height from parent state
   return { x: x, y: y, width: size.width, height: size.height };
 }
 

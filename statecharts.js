@@ -1106,7 +1106,7 @@ Renderer.prototype.hitTestState = function(state, p, tol, mode) {
         result = diagrams.hitTestRect(x, y, w, h, p, tol); // TODO hitTestRoundRect
   if (result) {
     const lineBase = y + theme.fontSize + theme.textLeading;
-    if (hitTestArrow(this, x + w + theme.arrowSize, lineBase, p, tol))
+    if (mode !== printMode && hitTestArrow(this, x + w + theme.arrowSize, lineBase, p, tol))
       result.arrow = true;
   }
   return result;
@@ -1186,7 +1186,7 @@ Renderer.prototype.hitTestPseudoState = function(state, p, tol, mode) {
         r = theme.radius,
         rect = this.getItemRect(state),
         x = rect.x, y = rect.y;
-  if (!isStopState(state) && hitTestArrow(this, x + 2 * r + theme.arrowSize, y + r, p, tol))
+  if (mode !== printMode && !isStopState(state) && hitTestArrow(this, x + 2 * r + theme.arrowSize, y + r, p, tol))
     return { arrow: true };
 
   return diagrams.hitTestDisk(x + r, y + r, r, p, tol);
@@ -1621,7 +1621,7 @@ Editor.prototype.draw = function() {
   // Reset the transform and render the palette over the document.
   renderer.begin(ctx);
   visitItems(statechart.palette, function(item) {
-    renderer.draw(item, normalMode);
+    renderer.draw(item, printMode);
   }, isNonTransition);
   renderer.end();
 }
@@ -1695,7 +1695,7 @@ Editor.prototype.hitTest = function(p) {
   // Hit test paletted items.
   renderer.begin(ctx);
   reverseVisitItems(statechart.palette, function(item) {
-    pushInfo(renderer.hitTest(item, p, tol, normalMode));
+    pushInfo(renderer.hitTest(item, p, tol, printMode));
   }, isNonTransition);
   renderer.end();
   return hitList;

@@ -833,7 +833,13 @@ Renderer.prototype.getItemRect = function (item) {
         x = translatableModel.globalX(item),
         y = translatableModel.globalY(item);
 
-  // TODO statecharts should get width/height from parent state
+  if (isStatechart(item)) {
+    const parent = this.model.hierarchicalModel.getParent(item);
+    if (parent) {
+      // Statechart width comes from containing state.
+      size.width = this.getSize(parent).width;
+    }
+  }
   return { x: x, y: y, width: size.width, height: size.height };
 }
 

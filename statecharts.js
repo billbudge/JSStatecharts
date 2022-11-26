@@ -828,33 +828,43 @@ Renderer.prototype.getSize = function(item) {
 }
 
 Renderer.prototype.getItemRect = function (item) {
-  const size = this.getSize(item),
-        translatableModel = this.model.translatableModel,
-        x = translatableModel.globalX(item),
-        y = translatableModel.globalY(item);
+  let x, y, width, height;
+  if  (isTransition(item)) {
+    const extents = geometry.getExtents(item[_bezier]);
+    x = extents.xmin;
+    y = extents.ymin;
+    width = extents.xmax - x;
+    height = extents.ymax - y;
+  } else {
+    const size = this.getSize(item),
+          translatableModel = this.model.translatableModel;
+    x = translatableModel.globalX(item);
+    y = translatableModel.globalY(item);
+    width = size.width;
+    height = size.height;
 
-  if (isStatechart(item)) {
+    if (isStatechart(item)) {
     const parent = this.model.hierarchicalModel.getParent(item);
     if (parent) {
       // Statechart width comes from containing state.
       size.width = this.getSize(parent).width;
     }
+    width = size.width;
+    height = size.height;
   }
-  return { x: x, y: y, width: size.width, height: size.height };
+}
+  return { x: x, y: y, width: width, height: height };
 }
 
 Renderer.prototype.getBounds = function(items) {
   let xMin = Number.POSITIVE_INFINITY, yMin = Number.POSITIVE_INFINITY,
       xMax = -Number.POSITIVE_INFINITY, yMax = -Number.POSITIVE_INFINITY;
   for (let item of items) {
-    if (isTransition(item))
-      continue;
-    const x = item.x, y = item.y,
-          size = this.getSize(item);
-    xMin = Math.min(xMin, x);
-    yMin = Math.min(yMin, y);
-    xMax = Math.max(xMax, x + size.width);
-    yMax = Math.max(yMax, y + size.height);
+    const rect = this.getItemRect(item);
+    xMin = Math.min(xMin, rect.x);
+    yMin = Math.min(yMin, rect.y);
+    xMax = Math.max(xMax, rect.x + rect.width);
+    yMax = Math.max(yMax, rect.y + rect.height);
   }
   return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
 }
@@ -1532,7 +1542,7 @@ Editor.prototype.updateBounds_ = function() {
   const canvasController = this.canvasController,
         canvasSize = canvasController.getSize();
   let width = statechart.width,
-      height =statechart.height;
+      height = statechart.height;
   if (width > canvasSize.width || height > canvasSize.height) {
     width = Math.max(width, canvasSize.width);
     height = Math.max(height, canvasSize.height);

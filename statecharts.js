@@ -86,8 +86,8 @@ function reverseVisitItems(items, fn, filter) {
 const _bezier = Symbol('bezier'),
       _p1 = Symbol('p1'),
       _p2 = Symbol('p2'),
-      _pt = Symbol('pt'),  // transition attachment point;
       _text = Symbol('text'),
+      _textT = Symbol('textT'),  // transition attachment parameter along curve;
       _textWidth = Symbol('textWidth'),
       _entryText = Symbol('entryText'),
       _entryY = Symbol('entryY'),
@@ -1022,7 +1022,7 @@ Renderer.prototype.layoutTransition = function(transition) {
     projectToCircle(dst, p2, p1);
   }
   transition[_bezier] = diagrams.getEdgeBezier(p1, p2);
-  transition[_pt] = geometry.evaluateBezier(transition[_bezier], transition.pt);
+  transition[_textT] = geometry.evaluateBezier(transition[_bezier], transition.pt);
   let text = '',
       textWidth = 0;
   if (transition.event) {
@@ -1240,9 +1240,8 @@ Renderer.prototype.drawTransition = function(transition, mode) {
       ctx.strokeStyle = theme.strokeColor;
       ctx.lineWidth = 1;
       ctx.stroke();
-      let src = this.getTransitionSrc(transition);
-      if (src && !isPseudostate(src) && mode !== printMode) {
-        const pt = transition[_pt],
+      if (mode !== printMode) {
+        const pt = transition[_textT],
               r = theme.radius / 2;
         diagrams.roundRectPath(pt.x - r,
                                pt.y - r,

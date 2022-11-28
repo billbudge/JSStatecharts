@@ -961,18 +961,24 @@ Renderer.prototype.layoutState = function(state) {
 }
 
 // Make sure a statechart is big enough to enclose its contents. Statecharts
-// are always sized automatically.
+// are always sized automatically to contain their contents and fit tightly in
+// their parent state.
 Renderer.prototype.layoutStatechart = function(statechart) {
   const padding = this.theme.padding,
+        translatableModel = this.model.translatableModel,
+        statechartX = translatableModel.globalX(statechart),
+        statechartY = translatableModel.globalY(statechart),
         items = statechart.items;
   if (items && items.length) {
     // Get extents of child states.
     const r = this.getBounds(items),
+          x = r.x - statechartX,  // Get position in statechart coordinates.
+          y = r.y - statechartY,
           observableModel = this.model.observableModel;
-    let xMin = Math.min(0, r.x - padding),
-        yMin = Math.min(0, r.y - padding),
-        xMax = r.x + r.width + padding,
-        yMax = r.y + r.height + padding;
+    let xMin = Math.min(0, x - padding),
+        yMin = Math.min(0, y - padding),
+        xMax = x + r.width + padding,
+        yMax = y + r.height + padding;
     if (xMin < 0) {
       xMax -= xMin;
       for (let i = 0; i < items.length; i++) {

@@ -1518,10 +1518,12 @@ Editor.prototype.initialize = function(canvasController) {
 Editor.prototype.updateLayout_ = function() {
   const renderer = this.renderer,
         changedItems = this.changedItems_;
-  // Render containers before transitions, so they are consistent with the
-  // updated dimensions of states.
+  // First make sure transitions have been laid out. Then layout containers, and
+  // re-layout transitions to reflect that states may have changed size and location.
   // This function is called during the draw and updateBounds_ methods, so the renderer
   // is already started.
+  changedItems.forEach(
+    item => { if (isTransition(item)) renderer.layout(item); });
   changedItems.forEach(
     item => { if (!isTransition(item)) renderer.layout(item); });
   changedItems.forEach(

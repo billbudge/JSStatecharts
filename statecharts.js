@@ -1518,16 +1518,17 @@ Editor.prototype.initialize = function(canvasController) {
 Editor.prototype.updateLayout_ = function() {
   const renderer = this.renderer,
         changedItems = this.changedItems_;
-  // First make sure transitions have been laid out. Then layout containers, and
-  // re-layout transitions to reflect that states may have changed size and location.
+  // First layout containers, and then layout transitions which depend on states'
+  // size and location.
   // This function is called during the draw and updateBounds_ methods, so the renderer
   // is already started.
+  function layout(item) {
+    reverseVisitItem(item, item => renderer.layout(item));
+  }
   changedItems.forEach(
-    item => { if (isTransition(item)) renderer.layout(item); });
+    item => { if (!isTransition(item)) layout(item); });
   changedItems.forEach(
-    item => { if (!isTransition(item)) renderer.layout(item); });
-  changedItems.forEach(
-    item => { if (isTransition(item)) renderer.layout(item); });
+    item => { if (isTransition(item)) layout(item); });
   changedItems.clear();
 }
 

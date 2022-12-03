@@ -41,10 +41,6 @@
     return "Are you sure you want to navigate away?";
   }
 
-  window.onscroll = function() {
-    canvasController.draw();
-  }
-
   function onPointerDown(e) {
     e.preventDefault();
     canvasController.onPointerDown(e);

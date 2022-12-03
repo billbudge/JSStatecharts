@@ -1479,7 +1479,6 @@ function Editor(model, theme, propertyGridController) {
 
 Editor.prototype.initialize = function(canvasController) {
   this.canvasController = canvasController;
-  this.canvas = canvasController.canvas;
   this.ctx = canvasController.ctx;
 
   const self = this,
@@ -1637,11 +1636,15 @@ Editor.prototype.draw = function() {
   renderer.end();
 
   // Reset the transform and render the palette over the document.
+  const canvasRect = canvasController.getClientRect(),
+        x = canvasRect.x, y = canvasRect.y;
+  ctx.translate(-x, -y);
   renderer.begin(ctx);
   visitItems(statechart.palette, function(item) {
     renderer.draw(item, printMode);
   }, isNonTransition);
   renderer.end();
+  ctx.translate(x, y);
 }
 
 Editor.prototype.print = function() {
@@ -1711,6 +1714,9 @@ Editor.prototype.hitTest = function(p) {
   renderer.end();
 
   // Hit test paletted items.
+  const canvasRect = canvasController.getClientRect();
+  p.x += canvasRect.x;
+  p.y += canvasRect.y;
   renderer.begin(ctx);
   reverseVisitItems(statechart.palette, function(item) {
     pushInfo(renderer.hitTest(item, p, tol, printMode));

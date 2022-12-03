@@ -857,14 +857,22 @@ Renderer.prototype.getItemRect = function (item) {
 }
 
 Renderer.prototype.getBounds = function(items) {
-  let xMin = Number.POSITIVE_INFINITY, yMin = Number.POSITIVE_INFINITY,
-      xMax = -Number.POSITIVE_INFINITY, yMax = -Number.POSITIVE_INFINITY;
+  let xMin = 0, yMin = 0, xMax = 0, yMax = 0, first = true;
   for (let item of items) {
-    const rect = this.getItemRect(item);
-    xMin = Math.min(xMin, rect.x);
-    yMin = Math.min(yMin, rect.y);
-    xMax = Math.max(xMax, rect.x + rect.width);
-    yMax = Math.max(yMax, rect.y + rect.height);
+    const rect = this.getItemRect(item),
+          x0 = rect.x, y0 = rect.y, x1 = x0 + rect.width, y1 = y0 + rect.height;
+    if (first) {
+      xMin = x0;
+      yMin = y0;
+      xMax = x1;
+      yMax = y1;
+      first = false;
+    } else {
+      xMin = Math.min(xMin, x0);
+      yMin = Math.min(yMin, y0);
+      xMax = Math.max(xMax, x1);
+      yMax = Math.max(yMax, y1);
+    }
   }
   return { x: xMin, y: yMin, width: xMax - xMin, height: yMax - yMin };
 }
@@ -1079,8 +1087,10 @@ Renderer.prototype.drawState = function(state, mode) {
 
       ctx.fillStyle = theme.textColor;
       ctx.fillText(state.name, x + r, y + textSize);
-      ctx.fillText(state[_entryText], x + r, y + state[_entryY] + textSize);
-      ctx.fillText(state[_exitText], x + r, y + state[_exitY] + textSize);
+      if (state.entry)
+        ctx.fillText(state[_entryText], x + r, y + state[_entryY] + textSize);
+      if (state.exit)
+        ctx.fillText(state[_exitText], x + r, y + state[_exitY] + textSize);
 
       const items = state.items;
       if (items) {

@@ -1361,10 +1361,12 @@ Renderer.prototype.drawHoverText = function(item, p) {
 function Editor(model, theme, propertyGridController) {
   const self = this;
   this.model = model;
-  this.statechart = model.root;
+  const statechart = model.root;
+  this.statechart = statechart;
   this.propertyGridController = propertyGridController;
 
-  this.theme = extendTheme(theme);
+  theme = extendTheme(theme);
+  this.theme = theme;
 
   this.hitTolerance = 8;
 
@@ -1377,7 +1379,25 @@ function Editor(model, theme, propertyGridController) {
   statechartModel.extend(model);
   editingModel.extend(model);
 
-  this.renderer = new Renderer(model, this.theme);
+  this.renderer = new Renderer(model, theme);
+
+  model.dataModel.initialize();
+
+  // Set up convenience functions.
+  this.getTransitionSrc = model.referencingModel.getReferenceFn('srcId');
+  this.getTransitionDst = model.referencingModel.getReferenceFn('dstId');
+
+  // On attribute changes and item insertions, dynamically layout affected items.
+  // This allows us to layout transitions as their src or dst states are dragged.
+  model.observableModel.addHandler('changed', change => self.onChanged_(change));
+
+  // On ending transactions and undo/redo, layout the changed top level states.
+  function updateBounds() {
+    self.updateBounds_();
+  }
+  model.transactionModel.addHandler('transactionEnding', updateBounds);
+  model.transactionModel.addHandler('didUndo', updateBounds);
+  model.transactionModel.addHandler('didRedo', updateBounds);
 
   this.palette = [
     {
@@ -1409,6 +1429,10 @@ function Editor(model, theme, propertyGridController) {
       name: 'New State',
     },
   ];
+
+  // Add palette items to the new statechart. This has to change if we load an existing statechart.
+  // TODO get rid of palette trickery.
+  this.palette.forEach(item => model.editingModel.addItem(item, statechart, true));
 
   // Register property grid layouts.
   function getAttr(info) {
@@ -1496,31 +1520,8 @@ Editor.prototype.initialize = function(canvasController) {
         ctx = this.ctx,
         renderer = this.renderer,
         model = this.model,
-        statechart = this.statechart,
-        editingModel = model.editingModel,
-        transactionModel = model.transactionModel,
-        transactionHistory = model.transactionHistory;
+        statechart = this.statechart;
   
-  model.dataModel.initialize();
-
-  this.getTransitionSrc = model.referencingModel.getReferenceFn('srcId');
-  this.getTransitionDst = model.referencingModel.getReferenceFn('dstId');
-
-  // On attribute changes and item insertions, dynamically layout affected items.
-  // This allows us to layout transitions as their src or dst states are dragged.
-  model.observableModel.addHandler('changed', change => self.onChanged_(change));
-
-  // On ending transactions and undo/redo, layout the changed top level states.
-  function updateBounds() {
-    self.updateBounds_();
-  }
-  transactionModel.addHandler('transactionEnding', updateBounds);
-  transactionModel.addHandler('didUndo', updateBounds);
-  transactionModel.addHandler('didRedo', updateBounds);
-  
-  // Add palette items to the new statechart. This has to change if we load an existing statechart.
-  this.palette.forEach(item => editingModel.addItem(item, statechart, true));
-
   // Layout everything in the palette and statechart.
   reverseVisitItem(statechart, item => renderer.layout(item));
 }

@@ -24,13 +24,13 @@
 
   const body = document.getElementById('body'),
         canvas = document.getElementById('canvas'),
-        ctx = canvas.getContext('2d'),
+        // TODO proper "document" handling.
         statechartModel = { root: statechart_data },
         theme = diagrams.theme.createDefault(),  // or createBlueprint
-        canvasController = new diagrams.CanvasController(canvas, ctx, theme),
+        panZoomLayer = new diagrams.CanvasPanZoomLayer(false),
+        canvasController = new diagrams.CanvasController(canvas, theme),
         propertyGridController = new diagrams.PropertyGridController(body, theme),
-        statechartEditor = new statecharts.Editor(statechartModel, theme, propertyGridController),
-        panZoomLayer = new diagrams.CanvasPanZoomLayer();
+        statechartEditor = new statecharts.Editor(statechartModel, theme, canvasController, propertyGridController);
 
   document.bgColor = theme.bgColor;
 

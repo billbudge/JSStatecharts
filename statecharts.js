@@ -1358,11 +1358,14 @@ Renderer.prototype.drawHoverText = function(item, p) {
 
 //------------------------------------------------------------------------------
 
-function Editor(model, theme, propertyGridController) {
+function Editor(model, theme, canvasController, propertyGridController) {
   const self = this;
   this.model = model;
   const statechart = model.root;
   this.statechart = statechart;
+  this.canvasController = canvasController;
+  this.canvas = canvasController.canvas;
+  this.ctx = canvasController.ctx;
   this.propertyGridController = propertyGridController;
 
   theme = extendTheme(theme);
@@ -1379,7 +1382,8 @@ function Editor(model, theme, propertyGridController) {
   statechartModel.extend(model);
   editingModel.extend(model);
 
-  this.renderer = new Renderer(model, theme);
+  const renderer = new Renderer(model, theme);
+  this.renderer = renderer;
 
   model.dataModel.initialize();
 
@@ -1512,18 +1516,14 @@ function Editor(model, theme, propertyGridController) {
 }
 
 Editor.prototype.initialize = function(canvasController) {
-  this.canvasController = canvasController;
-  this.canvas = canvasController.canvas;
-  this.ctx = canvasController.ctx;
-
-  const self = this,
-        ctx = this.ctx,
-        renderer = this.renderer,
-        model = this.model,
-        statechart = this.statechart;
-  
-  // Layout everything in the palette and statechart.
-  reverseVisitItem(statechart, item => renderer.layout(item));
+  const renderer = this.renderer,
+        ctx = this.ctx;
+  if (canvasController = this.canvasController) {
+    // Layout everything in the palette and statechart.
+    renderer.begin(this.ctx);
+    reverseVisitItem(this.statechart, item => renderer.layout(item));
+    renderer.end();
+  }
 }
 
 Editor.prototype.updateLayout_ = function() {

@@ -1403,40 +1403,44 @@ function Editor(model, theme, canvasController, propertyGridController) {
   model.transactionModel.addHandler('didUndo', updateBounds);
   model.transactionModel.addHandler('didRedo', updateBounds);
 
-  this.palette = [
-    {
-      type: 'start',
-      x: 8,
-      y: 8,
-    },
-    {
-      type: 'stop',
-      x: 40,
-      y: 8,
-    },
-    {
-      type: 'history',
-      x: 72,
-      y: 8,
-    },
-    {
-      type: 'history*',
-      x: 104,
-      y: 8,
-    },
-    {
-      type: 'state',
-      x: 8,
-      y: 30,
-      width: 100,
-      height: 60,
-      name: 'New State',
-    },
-  ];
-
-  // Add palette items to the new statechart. This has to change if we load an existing statechart.
-  // TODO get rid of palette trickery.
-  this.palette.forEach(item => model.editingModel.addItem(item, statechart, true));
+  // Embed the palette items in a statechart so the renderer can do layout and drawing.
+  this.palette = {
+    'type': 'statechart',
+    'x': 0,
+    'y': 0,
+    'width': 0,
+    'height': 0,
+    'items': [
+      {
+        type: 'start',
+        x: 8,
+        y: 8,
+      },
+      {
+        type: 'stop',
+        x: 40,
+        y: 8,
+      },
+      {
+        type: 'history',
+        x: 72,
+        y: 8,
+      },
+      {
+        type: 'history*',
+        x: 104,
+        y: 8,
+      },
+      {
+        type: 'state',
+        x: 8,
+        y: 30,
+        width: 100,
+        height: 60,
+        name: 'New State',
+      },
+    ],
+  }
 
   // Register property grid layouts.
   function getAttr(info) {
@@ -1516,14 +1520,15 @@ function Editor(model, theme, canvasController, propertyGridController) {
 }
 
 Editor.prototype.initialize = function(canvasController) {
-  const renderer = this.renderer,
-        ctx = this.ctx;
-  if (canvasController = this.canvasController) {
-    // Layout everything in the palette and statechart.
-    renderer.begin(this.ctx);
-    reverseVisitItem(this.statechart, item => renderer.layout(item));
-    renderer.end();
-  }
+  const renderer = this.renderer;
+  // Layout everything in the palette and statechart.
+  renderer.begin(this.ctx);
+  reverseVisitItem(this.statechart, item => renderer.layout(item));
+  // Layout the palette items and their parent statechart.
+  reverseVisitItem(this.palette, item => renderer.layout(item));
+  // Draw the palette items.
+  visitItems(this.palette.items, item => renderer.draw(item));
+  renderer.end();
 }
 
 Editor.prototype.updateLayout_ = function() {
@@ -1647,11 +1652,10 @@ Editor.prototype.draw = function() {
   }
   renderer.end();
 
-  // Reset the transform and render the palette over the document.
-  renderer.begin(ctx);
-  visitItems(statechart.palette, function(item) {
+  renderer.begin(this.ctx);
+  visitItems(this.palette.items, function(item) {
     renderer.draw(item, printMode);
-  }, isNonTransition);
+  });
   renderer.end();
 }
 
@@ -1700,9 +1704,7 @@ Editor.prototype.hitTest = function(p) {
         model = this.model,
         ctx = this.ctx, canvasController = this.canvasController,
         cp = canvasController.viewToCanvas(p),
-        scale = canvasController.scale,
-        zoom = Math.max(scale.x, scale.y),
-        tol = this.hitTolerance, cTol = tol / zoom,
+        tol = this.hitTolerance,
         statechart = this.statechart,
         hitList = [];
   function pushInfo(info) {
@@ -1714,20 +1716,29 @@ Editor.prototype.hitTest = function(p) {
   // TODO hit test selection first, in highlight, first.
   // Skip the root statechart, as hits there should go to the underlying canvas controller.
   reverseVisitItems(statechart.items, function(transition) {
-    pushInfo(renderer.hitTest(transition, cp, cTol, normalMode));
+    pushInfo(renderer.hitTest(transition, cp, tol, normalMode));
   }, isTransition);
   reverseVisitItems(statechart.items, function(item) {
-    pushInfo(renderer.hitTest(item, cp, cTol, normalMode));
-  }, isNonTransition);
-  renderer.end();
-
-  // Hit test paletted items.
-  renderer.begin(ctx);
-  reverseVisitItems(statechart.palette, function(item) {
-    pushInfo(renderer.hitTest(item, p, tol, printMode));
+    pushInfo(renderer.hitTest(item, cp, tol, normalMode));
   }, isNonTransition);
   renderer.end();
   return hitList;
+}
+
+Editor.prototype.hitTestPalette = function(p, hitList) {
+  const renderer = this.renderer,
+        model = this.model,
+        ctx = this.ctx,
+        tol = this.hitTolerance;
+  function pushInfo(info) {
+    if (info)
+      hitList.push(info);
+  }
+  renderer.begin(ctx);
+  reverseVisitItems(this.palette.items, function(item) {
+    pushInfo(renderer.hitTest(item, p, tol, printMode));
+  }, isNonTransition);
+  renderer.end();
 }
 
 Editor.prototype.getFirstHit = function(hitList, filterFn) {
@@ -1750,10 +1761,8 @@ function isDraggable(hitInfo, model) {
 }
 
 function isStateDropTarget(hitInfo, model) {
-  const item = hitInfo.item,
-        palette = model.root.palette;
-  return !palette.includes(item) &&
-         isTrueStateOrStatechart(item) &&
+  const item = hitInfo.item;
+  return isTrueStateOrStatechart(item) &&
          !model.hierarchicalModel.isItemInSelection(item);
 }
 
@@ -1764,8 +1773,9 @@ Editor.prototype.setPropertyGrid = function() {
   this.propertyGridController.show(type, item);
 }
 
+// TODO remove this now.
 Editor.prototype.isPaletteItem = function(item) {
-  const palette = this.statechart.palette;
+  const palette = this.palette.items;
   return palette.includes(item);
 }
 
@@ -1774,8 +1784,10 @@ Editor.prototype.onClick = function(p) {
         selectionModel = model.selectionModel,
         shiftKeyDown = this.canvasController.shiftKeyDown,
         cmdKeyDown = this.canvasController.cmdKeyDown,
-        hitList = this.hitTest(p),
-        mouseHitInfo = this.mouseHitInfo = this.getFirstHit(hitList, isDraggable);
+        hitList = this.hitTest(p);
+  // Hit test the palette on top of the canvas.
+  this.hitTestPalette(p, hitList);
+  const mouseHitInfo = this.mouseHitInfo = this.getFirstHit(hitList, isDraggable);
   if (mouseHitInfo) {
     const item = mouseHitInfo.item,
           inPalette = this.isPaletteItem(item);
@@ -2188,6 +2200,5 @@ const statechart_data = {
   'width': 0,
   'height': 0,
   'name': 'Example',
-  'palette': [],
   'items': [],
 }

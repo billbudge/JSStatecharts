@@ -2,11 +2,12 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Sandbox</title>
+  <title>Statechart Editor</title>
   <link rel="shortcut icon" href="./favicon.ico">
 </head>
 <body id="body">
 
+<!-- <canvas id="palette" style="position:fixed"></canvas> -->
 <canvas id="canvas" style="position:relative"></canvas>
 
 <script src="JSAppFramework/base.js"></script>
@@ -24,18 +25,23 @@
 
   const body = document.getElementById('body'),
         canvas = document.getElementById('canvas'),
+        // palette = document.getElementById('palette'),
         // TODO proper "document" handling.
         statechartModel = { root: statechart_data },
         theme = diagrams.theme.createDefault(),  // or createBlueprint
         panZoomLayer = new diagrams.CanvasPanZoomLayer(false),
         canvasController = new diagrams.CanvasController(canvas, theme),
+        // paletteController = new diagrams.CanvasController(palette, theme),
         propertyGridController = new diagrams.PropertyGridController(body, theme),
-        statechartEditor = new statecharts.Editor(statechartModel, theme, canvasController, propertyGridController);
+        statechartEditor = new statecharts.Editor(
+            statechartModel, theme, canvasController, propertyGridController);
 
   document.bgColor = theme.bgColor;
 
   canvasController.configure([panZoomLayer, statechartEditor]);
   canvasController.setSize(window.innerWidth, window.innerHeight);
+  // paletteController.configure([statechartEditor]);
+  // paletteController.setSize(150, 100);
 
   window.onbeforeunload = function() {
     return "Are you sure you want to navigate away?";

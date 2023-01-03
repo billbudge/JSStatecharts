@@ -1358,7 +1358,7 @@ Renderer.prototype.drawHoverText = function(item, p) {
 
 //------------------------------------------------------------------------------
 
-function Editor(model, theme, canvasController, propertyGridController) {
+function Editor(model, theme, canvasController, paletteController, propertyGridController) {
   const self = this;
   this.model = model;
   const statechart = model.root;
@@ -1366,6 +1366,9 @@ function Editor(model, theme, canvasController, propertyGridController) {
   this.canvasController = canvasController;
   this.canvas = canvasController.canvas;
   this.ctx = canvasController.ctx;
+  this.paletteController = paletteController;
+  this.paletteCanvas = paletteController.canvas;
+  this.paletteCtx = paletteController.ctx;
   this.propertyGridController = propertyGridController;
 
   theme = extendTheme(theme);
@@ -1625,38 +1628,40 @@ Editor.prototype.onChanged_ = function(change) {
   }
 }
 
-Editor.prototype.draw = function() {
+Editor.prototype.draw = function(canvasController) {
   const renderer = this.renderer, statechart = this.statechart,
         model = this.model,
-        ctx = this.ctx, canvasController = this.canvasController;
-  renderer.begin(ctx);
-  this.updateLayout_();
-  canvasController.applyTransform();
-
-  visitItem(statechart, function(item) {
-    renderer.draw(item, normalMode);
-  }, isNonTransition);
-  visitItem(statechart, function(transition) {
-    renderer.draw(transition, normalMode);
-  }, isTransition);
-
-  model.selectionModel.forEach(function(item) {
-    renderer.draw(item, highlightMode);
-  });
-  if (this.hotTrackInfo)
-    renderer.draw(this.hotTrackInfo.item, hotTrackMode);
-
-  const hoverHitInfo = this.hoverHitInfo;
-  if (hoverHitInfo) {
-    renderer.drawHoverText(hoverHitInfo.item, hoverHitInfo.p);
+        ctx = canvasController.getCtx();
+  if (canvasController === this.canvasController) {
+    renderer.begin(ctx);
+    this.updateLayout_();
+    canvasController.applyTransform();
+  
+    visitItem(statechart, function(item) {
+      renderer.draw(item, normalMode);
+    }, isNonTransition);
+    visitItem(statechart, function(transition) {
+      renderer.draw(transition, normalMode);
+    }, isTransition);
+  
+    model.selectionModel.forEach(function(item) {
+      renderer.draw(item, highlightMode);
+    });
+    if (this.hotTrackInfo)
+      renderer.draw(this.hotTrackInfo.item, hotTrackMode);
+  
+    const hoverHitInfo = this.hoverHitInfo;
+    if (hoverHitInfo) {
+      renderer.drawHoverText(hoverHitInfo.item, hoverHitInfo.p);
+    }
+    renderer.end();
+  } else if (canvasController === this.paletteController) {
+    renderer.begin(ctx);
+    visitItems(this.palette.items, function(item) {
+      renderer.draw(item, printMode);
+    });
+    renderer.end();
   }
-  renderer.end();
-
-  renderer.begin(this.ctx);
-  visitItems(this.palette.items, function(item) {
-    renderer.draw(item, printMode);
-  });
-  renderer.end();
 }
 
 Editor.prototype.print = function() {
@@ -1794,6 +1799,7 @@ Editor.prototype.onClick = function(p) {
     if (inPalette) {
       mouseHitInfo.inPalette = true;
       selectionModel.clear();
+      this.paletteController.transferPointer(this.canvasController);
     } else if (cmdKeyDown) {
       mouseHitInfo.moveCopy = true;
       selectionModel.select(item);

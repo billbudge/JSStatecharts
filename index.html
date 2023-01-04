@@ -41,31 +41,6 @@
     return "Are you sure you want to navigate away?";
   }
 
-  function onPointerDown(e) {
-    e.preventDefault();
-    canvasController.onPointerDown(e);
-  }
-
-  function onPointerMove(e) {
-    e.preventDefault();
-    canvasController.onPointerMove(e);
-  }
-
-  function onPointerUp(e) {
-    e.preventDefault();
-    canvasController.onPointerUp(e);
-  }
-
-  function onDoubleClick(e) {
-    canvasController.onDoubleClick(e);
-  }
-
-  canvas.addEventListener('pointerdown', onPointerDown);
-  canvas.addEventListener('pointermove', onPointerMove);
-  canvas.addEventListener('pointerup', onPointerUp);
-
-  canvas.addEventListener('dblclick', onDoubleClick);
-
   document.addEventListener('keydown', function(e) {
     // Handle any keyboard commands for the app window here.
     canvasController.onKeyDown(e);

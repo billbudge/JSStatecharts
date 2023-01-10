@@ -509,7 +509,7 @@ const editingModel = (function() {
       if (isStartingState(src)) {
         const srcParent = this.getParent(src),
               dstParent = this.getParent(dst);
-        return srcParent == dstParent; 
+        return srcParent == dstParent;
       }
       // Transitions can't straddle parallel statecharts. The lowest common ancestor
       // of src and dst must be a statechart, not a state.
@@ -1358,7 +1358,7 @@ Renderer.prototype.drawHoverText = function(item, p) {
 
 //------------------------------------------------------------------------------
 
-function Editor(model, theme, canvasController, propertyGridController) {
+function Editor(model, theme, canvasController, paletteController, propertyGridController) {
   const self = this;
   this.model = model;
   const statechart = model.root;
@@ -1366,6 +1366,9 @@ function Editor(model, theme, canvasController, propertyGridController) {
   this.canvasController = canvasController;
   this.canvas = canvasController.canvas;
   this.ctx = canvasController.ctx;
+  this.paletteController = paletteController;
+  this.paletteCanvas = paletteController.canvas;
+  this.paletteCtx = paletteController.ctx;
   this.propertyGridController = propertyGridController;
 
   theme = extendTheme(theme);
@@ -1403,40 +1406,44 @@ function Editor(model, theme, canvasController, propertyGridController) {
   model.transactionModel.addHandler('didUndo', updateBounds);
   model.transactionModel.addHandler('didRedo', updateBounds);
 
-  this.palette = [
-    {
-      type: 'start',
-      x: 8,
-      y: 8,
-    },
-    {
-      type: 'stop',
-      x: 40,
-      y: 8,
-    },
-    {
-      type: 'history',
-      x: 72,
-      y: 8,
-    },
-    {
-      type: 'history*',
-      x: 104,
-      y: 8,
-    },
-    {
-      type: 'state',
-      x: 8,
-      y: 30,
-      width: 100,
-      height: 60,
-      name: 'New State',
-    },
-  ];
-
-  // Add palette items to the new statechart. This has to change if we load an existing statechart.
-  // TODO get rid of palette trickery.
-  this.palette.forEach(item => model.editingModel.addItem(item, statechart, true));
+  // Embed the palette items in a statechart so the renderer can do layout and drawing.
+  this.palette = {
+    'type': 'statechart',
+    'x': 0,
+    'y': 0,
+    'width': 0,
+    'height': 0,
+    'items': [
+      {
+        type: 'start',
+        x: 8,
+        y: 8,
+      },
+      {
+        type: 'stop',
+        x: 40,
+        y: 8,
+      },
+      {
+        type: 'history',
+        x: 72,
+        y: 8,
+      },
+      {
+        type: 'history*',
+        x: 104,
+        y: 8,
+      },
+      {
+        type: 'state',
+        x: 8,
+        y: 30,
+        width: 100,
+        height: 60,
+        name: 'New State',
+      },
+    ],
+  }
 
   // Register property grid layouts.
   function getAttr(info) {
@@ -1516,14 +1523,15 @@ function Editor(model, theme, canvasController, propertyGridController) {
 }
 
 Editor.prototype.initialize = function(canvasController) {
-  const renderer = this.renderer,
-        ctx = this.ctx;
-  if (canvasController = this.canvasController) {
-    // Layout everything in the palette and statechart.
-    renderer.begin(this.ctx);
-    reverseVisitItem(this.statechart, item => renderer.layout(item));
-    renderer.end();
-  }
+  const renderer = this.renderer;
+  // Layout everything in the palette and statechart.
+  renderer.begin(this.ctx);
+  reverseVisitItem(this.statechart, item => renderer.layout(item));
+  // Layout the palette items and their parent statechart.
+  reverseVisitItem(this.palette, item => renderer.layout(item));
+  // Draw the palette items.
+  visitItems(this.palette.items, item => renderer.draw(item));
+  renderer.end();
 }
 
 Editor.prototype.updateLayout_ = function() {
@@ -1620,39 +1628,52 @@ Editor.prototype.onChanged_ = function(change) {
   }
 }
 
-Editor.prototype.draw = function() {
+Editor.prototype.draw = function(canvasController) {
   const renderer = this.renderer, statechart = this.statechart,
-        model = this.model,
-        ctx = this.ctx, canvasController = this.canvasController;
-  renderer.begin(ctx);
-  this.updateLayout_();
-  canvasController.applyTransform();
+        model = this.model;
+  if (canvasController === this.canvasController) {
+    const ctx = this.ctx;
+    renderer.begin(ctx);
+    this.updateLayout_();
+    canvasController.applyTransform();
 
-  visitItem(statechart, function(item) {
-    renderer.draw(item, normalMode);
-  }, isNonTransition);
-  visitItem(statechart, function(transition) {
-    renderer.draw(transition, normalMode);
-  }, isTransition);
+    visitItem(statechart, function(item) {
+      renderer.draw(item, normalMode);
+    }, isNonTransition);
+    visitItem(statechart, function(transition) {
+      renderer.draw(transition, normalMode);
+    }, isTransition);
 
-  model.selectionModel.forEach(function(item) {
-    renderer.draw(item, highlightMode);
-  });
-  if (this.hotTrackInfo)
-    renderer.draw(this.hotTrackInfo.item, hotTrackMode);
+    model.selectionModel.forEach(function(item) {
+      renderer.draw(item, highlightMode);
+    });
+    if (this.hotTrackInfo)
+      renderer.draw(this.hotTrackInfo.item, hotTrackMode);
 
-  const hoverHitInfo = this.hoverHitInfo;
-  if (hoverHitInfo) {
-    renderer.drawHoverText(hoverHitInfo.item, hoverHitInfo.p);
+    const hoverHitInfo = this.hoverHitInfo;
+    if (hoverHitInfo) {
+      renderer.drawHoverText(hoverHitInfo.item, hoverHitInfo.p);
+    }
+    renderer.end();
+  } else if (canvasController === this.paletteController) {
+    // Palette drawing occurs during drag and drop. If the palette has the drag,
+    // draw the canvas underneath so the new object will appear on the canvas.
+    this.canvasController.draw();
+    const ctx = this.paletteCtx;
+    renderer.begin(ctx);
+    canvasController.applyTransform();
+    visitItems(this.palette.items, function(item) {
+      renderer.draw(item, printMode);
+    });
+    // Draw the new object in the palette. Translate object to palette coordinates.
+    const offset = canvasController.offsetToOtherCanvas(this.paletteController);
+    ctx.translate(offset.x, offset.y);
+    model.selectionModel.forEach(function(item) {
+      renderer.draw(item, normalMode);
+      renderer.draw(item, highlightMode);
+    });
+    renderer.end();
   }
-  renderer.end();
-
-  // Reset the transform and render the palette over the document.
-  renderer.begin(ctx);
-  visitItems(statechart.palette, function(item) {
-    renderer.draw(item, printMode);
-  }, isNonTransition);
-  renderer.end();
 }
 
 Editor.prototype.print = function() {
@@ -1695,15 +1716,25 @@ Editor.prototype.print = function() {
   saveAs(blob, 'statechart.svg', true);
 }
 
-Editor.prototype.hitTest = function(p) {
+Editor.prototype.getCanvasPosition = function(canvasController, p) {
+  // TODO make this simplification.
+  // return this.paletteController.viewToOtherCanvasView(canvasController, p);
+  const cp = canvasController.viewToCanvas(p);
+  if (canvasController == this.canvasController) {
+    return cp;
+  } else {
+    assert(canvasController === this.paletteController);
+    const offset = canvasController.offsetToOtherCanvas(this.canvasController);
+    return { x: cp.x - offset.x, y: cp.y - offset.y };
+  }
+}
+
+Editor.prototype.hitTest = function(canvasController, p) {
   const renderer = this.renderer,
-        model = this.model,
-        ctx = this.ctx, canvasController = this.canvasController,
-        cp = canvasController.viewToCanvas(p),
-        scale = canvasController.scale,
-        zoom = Math.max(scale.x, scale.y),
-        tol = this.hitTolerance, cTol = tol / zoom,
+        tol = this.hitTolerance,
         statechart = this.statechart,
+        cp = this.getCanvasPosition(canvasController, p),
+        ctx = canvasController.getCtx(),
         hitList = [];
   function pushInfo(info) {
     if (info)
@@ -1714,16 +1745,26 @@ Editor.prototype.hitTest = function(p) {
   // TODO hit test selection first, in highlight, first.
   // Skip the root statechart, as hits there should go to the underlying canvas controller.
   reverseVisitItems(statechart.items, function(transition) {
-    pushInfo(renderer.hitTest(transition, cp, cTol, normalMode));
+    pushInfo(renderer.hitTest(transition, cp, tol, normalMode));
   }, isTransition);
   reverseVisitItems(statechart.items, function(item) {
-    pushInfo(renderer.hitTest(item, cp, cTol, normalMode));
+    pushInfo(renderer.hitTest(item, cp, tol, normalMode));
   }, isNonTransition);
   renderer.end();
+  return hitList;
+}
 
-  // Hit test paletted items.
+Editor.prototype.hitTestPalette = function(canvasController, p) {
+  const renderer = this.renderer,
+        tol = this.hitTolerance,
+        ctx = canvasController.getCtx(),
+        hitList = [];
+  function pushInfo(info) {
+    if (info)
+      hitList.push(info);
+  }
   renderer.begin(ctx);
-  reverseVisitItems(statechart.palette, function(item) {
+  reverseVisitItems(this.palette.items, function(item) {
     pushInfo(renderer.hitTest(item, p, tol, printMode));
   }, isNonTransition);
   renderer.end();
@@ -1750,10 +1791,8 @@ function isDraggable(hitInfo, model) {
 }
 
 function isStateDropTarget(hitInfo, model) {
-  const item = hitInfo.item,
-        palette = model.root.palette;
-  return !palette.includes(item) &&
-         isTrueStateOrStatechart(item) &&
+  const item = hitInfo.item;
+  return isTrueStateOrStatechart(item) &&
          !model.hierarchicalModel.isItemInSelection(item);
 }
 
@@ -1764,24 +1803,29 @@ Editor.prototype.setPropertyGrid = function() {
   this.propertyGridController.show(type, item);
 }
 
-Editor.prototype.isPaletteItem = function(item) {
-  const palette = this.statechart.palette;
-  return palette.includes(item);
-}
-
-Editor.prototype.onClick = function(p) {
+Editor.prototype.onClick = function(canvasController, alt) {
   const model = this.model,
         selectionModel = model.selectionModel,
         shiftKeyDown = this.canvasController.shiftKeyDown,
         cmdKeyDown = this.canvasController.cmdKeyDown,
-        hitList = this.hitTest(p),
-        mouseHitInfo = this.mouseHitInfo = this.getFirstHit(hitList, isDraggable);
+        p = canvasController.getInitialPointerPosition(),
+        cp = canvasController.viewToCanvas(p);
+  let hitList;
+  if (canvasController === this.paletteController) {
+    // Hit test the palette on top of the canvas.
+    hitList = this.hitTestPalette(canvasController, cp);
+  } else {
+    assert(canvasController === this.canvasController);
+    hitList = this.hitTest(canvasController, cp);
+  }
+  const mouseHitInfo = this.mouseHitInfo = this.getFirstHit(hitList, isDraggable);
   if (mouseHitInfo) {
     const item = mouseHitInfo.item,
-          inPalette = this.isPaletteItem(item);
+          inPalette = canvasController === this.paletteController;
     if (inPalette) {
       mouseHitInfo.inPalette = true;
       selectionModel.clear();
+      // this.paletteController.transferPointer(this.canvasController);
     } else if (cmdKeyDown) {
       mouseHitInfo.moveCopy = true;
       selectionModel.select(item);
@@ -1805,19 +1849,19 @@ const connectTransitionSrc = 1,
       resizeState = 6,
       moveTransitionPoint = 7;
 
-Editor.prototype.onBeginDrag = function(p0) {
-  const mouseHitInfo = this.mouseHitInfo,
-        canvasController = this.canvasController;
+Editor.prototype.onBeginDrag = function(canvasController) {
+  const mouseHitInfo = this.mouseHitInfo;
   if (!mouseHitInfo)
     return false;
   const model = this.model,
         editingModel = model.editingModel,
         selectionModel = model.selectionModel,
-        dragItem = mouseHitInfo.item;
+        dragItem = mouseHitInfo.item,
+        p0 = canvasController.getInitialPointerPosition();
   let drag, newTransition;
   if (mouseHitInfo.arrow) {
     const stateId = model.dataModel.getId(dragItem),
-          cp0 = canvasController.viewToCanvas(p0);
+          cp0 = this.getCanvasPosition(canvasController, p0);
     // Start the new transition as connecting the src state to itself.
     newTransition = {
       type: 'transition',
@@ -1907,9 +1951,9 @@ Editor.prototype.onBeginDrag = function(p0) {
               copies = editingModel.copyItems(drag.items, map);
         // Transform palette items into the canvas coordinate system.
         if (drag.type == copyPaletteItem) {
+          const offset = this.paletteController.offsetToOtherCanvas(this.canvasController);
           copies.forEach(function transform(item) {
-            const cp0 = canvasController.viewToCanvas({ x: item.x, y: item.y });
-            item.x = cp0.x; item.y = cp0.y;
+            item.x -= offset.x; item.y -= offset.y;
           });
           }
         editingModel.addItems(copies);
@@ -1919,7 +1963,7 @@ Editor.prototype.onBeginDrag = function(p0) {
   }
 }
 
-Editor.prototype.onDrag = function(p0, p) {
+Editor.prototype.onDrag = function(canvasController) {
   const drag = this.drag;
   if (!drag)
     return;
@@ -1932,13 +1976,14 @@ Editor.prototype.onDrag = function(p0, p) {
         selectionModel = model.selectionModel,
         editingModel = model.editingModel,
         renderer = this.renderer,
-        canvasController = this.canvasController,
-        cp0 = canvasController.viewToCanvas(p0),
-        cp = canvasController.viewToCanvas(p),
+        p0 = canvasController.getInitialPointerPosition(),
+        cp0 = this.getCanvasPosition(canvasController, p0),
+        p = canvasController.getCurrentPointerPosition(),
+        cp = this.getCanvasPosition(canvasController, p),
         dx = cp.x - cp0.x, dy = cp.y - cp0.y,
         mouseHitInfo = this.mouseHitInfo,
         snapshot = transactionModel.getSnapshot(dragItem),
-        hitList = this.hitTest(p);
+        hitList = this.hitTest(canvasController, p);
   let hitInfo;
   switch (drag.type) {
     case copyPaletteItem:
@@ -2016,27 +2061,23 @@ Editor.prototype.onDrag = function(p0, p) {
   this.hotTrackInfo = (hitInfo && hitInfo.item !== this.statechart) ? hitInfo : null;
 }
 
-Editor.prototype.onEndDrag = function(p) {
+Editor.prototype.onEndDrag = function(canvasController) {
   const drag = this.drag;
   if (!drag)
     return;
   const model = this.model,
         statechart = this.statechart,
-        observableModel = model.observableModel,
-        hierarchicalModel = model.hierarchicalModel,
         selectionModel = model.selectionModel,
         transactionModel = model.transactionModel,
         editingModel = model.editingModel,
-        mouseHitInfo = this.mouseHitInfo,
+        p = canvasController.getCurrentPointerPosition(),
         dragItem = drag.item;
   if (isTransition(dragItem)) {
     dragItem[_p1] = dragItem[_p2] = undefined;
-    const src = this.getTransitionSrc(dragItem),
-          dst = this.getTransitionDst(dragItem);
   } else if (drag.type == copyPaletteItem || drag.type === moveSelection ||
              drag.type === moveCopySelection) {
     // Find state beneath mouse.
-    const hitList = this.hitTest(p),
+    const hitList = this.hitTest(canvasController, p),
           hitInfo = this.getFirstHit(hitList, isStateDropTarget),
           parent = hitInfo ? hitInfo.item : statechart;
     // Reparent items.
@@ -2061,21 +2102,21 @@ Editor.prototype.onEndDrag = function(p) {
   this.canvasController.draw();
 }
 
-Editor.prototype.onBeginHover = function(p) {
+Editor.prototype.onBeginHover = function(canvasController) {
   const model = this.model,
-        hitList = this.hitTest(p),
+        p = canvasController.getCurrentPointerPosition(),
+        hitList = this.hitTest(canvasController, p),
         hoverHitInfo = this.getFirstHit(hitList, isDraggable);
   if (!hoverHitInfo)
     return false;
-  const canvasController = this.canvasController,
-        cp = canvasController.viewToCanvas(p);
+  const cp = canvasController.viewToCanvas(p);
 
   hoverHitInfo.p = cp;
   this.hoverHitInfo = hoverHitInfo;
   return true;
 }
 
-Editor.prototype.onEndHover = function(p) {
+Editor.prototype.onEndHover = function(canvasController) {
   if (this.hoverHitInfo)
     this.hoverHitInfo = null;
 }
@@ -2188,6 +2229,5 @@ const statechart_data = {
   'width': 0,
   'height': 0,
   'name': 'Example',
-  'palette': [],
   'items': [],
 }

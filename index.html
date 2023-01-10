@@ -46,24 +46,9 @@
     return "Are you sure you want to navigate away?";
   }
 
-  // function onPointerDown(e) {
-  //   e.preventDefault();
-  //   const paletteRect = palette.getBoundingClientRect(),
-  //         paletteX = e.clientX - paletteRect.left,
-  //         paletteY = e.clientY - paletteRect.top;
-  //   if (paletteX > 0 && paletteX < paletteRect.width && paletteY > 0 && paletteY < paletteRect.height) {
-  //     paletteController.onPointerDown(e);
-  //     paletteController.transferPointer(e, canvasController);
-  //   } else {
-  //     canvasController.onPointerDown(e);
-  //   }
-  // }
-
   function onDoubleClick(e) {
     canvasController.onDoubleClick(e);
   }
-
-  // canvas.addEventListener('pointerdown', onPointerDown);
 
   canvas.addEventListener('dblclick', onDoubleClick);
 

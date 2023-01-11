@@ -1666,7 +1666,7 @@ Editor.prototype.draw = function(canvasController) {
       renderer.draw(item, printMode);
     });
     // Draw the new object in the palette. Translate object to palette coordinates.
-    const offset = canvasController.offsetToOtherCanvas(this.paletteController);
+    const offset = canvasController.offsetToOtherCanvas(this.canvasController);
     ctx.translate(offset.x, offset.y);
     model.selectionModel.forEach(function(item) {
       renderer.draw(item, normalMode);
@@ -1717,16 +1717,9 @@ Editor.prototype.print = function() {
 }
 
 Editor.prototype.getCanvasPosition = function(canvasController, p) {
-  // TODO make this simplification.
-  // return this.paletteController.viewToOtherCanvasView(canvasController, p);
-  const cp = canvasController.viewToCanvas(p);
-  if (canvasController == this.canvasController) {
-    return cp;
-  } else {
-    assert(canvasController === this.paletteController);
-    const offset = canvasController.offsetToOtherCanvas(this.canvasController);
-    return { x: cp.x - offset.x, y: cp.y - offset.y };
-  }
+  // When dragging from the palette, convert the position from pointer events
+  // into the canvas space to render the drag and drop.
+  return this.canvasController.viewToOtherCanvasView(canvasController, p);
 }
 
 Editor.prototype.hitTest = function(canvasController, p) {
@@ -1810,18 +1803,19 @@ Editor.prototype.onClick = function(canvasController, alt) {
         cmdKeyDown = this.canvasController.cmdKeyDown,
         p = canvasController.getInitialPointerPosition(),
         cp = canvasController.viewToCanvas(p);
-  let hitList;
+  let hitList, inPalette;
   if (canvasController === this.paletteController) {
     // Hit test the palette on top of the canvas.
     hitList = this.hitTestPalette(canvasController, cp);
+    inPalette = true;
   } else {
     assert(canvasController === this.canvasController);
     hitList = this.hitTest(canvasController, cp);
+    inPalette = false;
   }
   const mouseHitInfo = this.mouseHitInfo = this.getFirstHit(hitList, isDraggable);
   if (mouseHitInfo) {
-    const item = mouseHitInfo.item,
-          inPalette = canvasController === this.paletteController;
+    const item = mouseHitInfo.item;
     if (inPalette) {
       mouseHitInfo.inPalette = true;
       selectionModel.clear();

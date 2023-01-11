@@ -1364,11 +1364,7 @@ function Editor(model, theme, canvasController, paletteController, propertyGridC
   const statechart = model.root;
   this.statechart = statechart;
   this.canvasController = canvasController;
-  this.canvas = canvasController.canvas;
-  this.ctx = canvasController.ctx;
   this.paletteController = paletteController;
-  this.paletteCanvas = paletteController.canvas;
-  this.paletteCtx = paletteController.ctx;
   this.propertyGridController = propertyGridController;
 
   theme = extendTheme(theme);
@@ -1524,14 +1520,15 @@ function Editor(model, theme, canvasController, paletteController, propertyGridC
 
 Editor.prototype.initialize = function(canvasController) {
   const renderer = this.renderer;
-  // Layout everything in the palette and statechart.
-  renderer.begin(this.ctx);
+  // Layout any items in the statechart.
+  renderer.begin(this.canvasController.getCtx());
   reverseVisitItem(this.statechart, item => renderer.layout(item));
+  renderer.end();
   // Layout the palette items and their parent statechart.
+  renderer.begin(this.paletteController.getCtx());
   reverseVisitItem(this.palette, item => renderer.layout(item));
   // Draw the palette items.
   visitItems(this.palette.items, item => renderer.draw(item));
-  renderer.end();
 }
 
 Editor.prototype.updateLayout_ = function() {
@@ -1552,7 +1549,7 @@ Editor.prototype.updateLayout_ = function() {
 }
 
 Editor.prototype.updateBounds_ = function() {
-  const ctx = this.ctx,
+  const ctx = this.canvasController.getCtx(),
         renderer = this.renderer,
         statechart = this.statechart,
         changedTopLevelStates = this.changedTopLevelStates_;
@@ -1632,7 +1629,7 @@ Editor.prototype.draw = function(canvasController) {
   const renderer = this.renderer, statechart = this.statechart,
         model = this.model;
   if (canvasController === this.canvasController) {
-    const ctx = this.ctx;
+    const ctx = this.canvasController.getCtx();
     renderer.begin(ctx);
     this.updateLayout_();
     canvasController.applyTransform();
@@ -1659,7 +1656,7 @@ Editor.prototype.draw = function(canvasController) {
     // Palette drawing occurs during drag and drop. If the palette has the drag,
     // draw the canvas underneath so the new object will appear on the canvas.
     this.canvasController.draw();
-    const ctx = this.paletteCtx;
+    const ctx = this.paletteController.getCtx();
     renderer.begin(ctx);
     canvasController.applyTransform();
     visitItems(this.palette.items, function(item) {

@@ -46,6 +46,11 @@
     return "Are you sure you want to navigate away?";
   }
 
+  window.onresize = function() {
+    paletteController.onWindowResize();
+    canvasController.onWindowResize();
+  }
+
   document.addEventListener('keydown', function(e) {
     // Handle any keyboard commands for the app window here.
     canvasController.onKeyDown(e);

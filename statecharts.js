@@ -1366,6 +1366,8 @@ function Editor(model, theme, canvasController, paletteController, propertyGridC
   this.canvasController = canvasController;
   this.paletteController = paletteController;
   this.propertyGridController = propertyGridController;
+  this.fileController = new diagrams.FileController();
+
 
   theme = extendTheme(theme);
   this.theme = theme;
@@ -2166,38 +2168,38 @@ Editor.prototype.onKeyDown = function(e) {
       case 72:  // 'h'
         editingModel.doTogglePalette();
         return true;
-      case 83:  // 's'
-        // var text = JSON.stringify(
-        //   statechart,
-        //   function(key, value) {
-        //     if (key.toString().charAt(0) === '_')
-        //       return;
-        //     if (value === undefined || value === null)
-        //       return;
-        //     return value;
-        //   },
-        //   2);
-        // // Writes statechart as JSON to console.
-        // console.log(text);
 
-        // var ctx = new canvas2pdf.PdfContext(blobStream());
-        // this.print(ctx);
-        // // //draw your canvas like you would normally
-        // // ctx.fillStyle='yellow';
-        // // ctx.fillRect(100,100,100,100);
-        // // // more canvas drawing, etc...
+      case 83: {  // 's'
+        let text = JSON.stringify(
+          statechart,
+          function(key, value) {
+            // Don't serialize generated and hidden fields.
+            if (key.toString().charAt(0) === '_')
+              return;
+            if (value === undefined || value === null)
+              return;
+            return value;
+          },
+          2);
 
-        // //convert your PDF to a Blob and save to file
-        // ctx.stream.on('finish', function () {
-        //     var blob = ctx.stream.toBlob('application/pdf');
-        //     saveAs(blob, 'example.pdf', true);
-        // });
-        // ctx.end();
-
-        {
-          this.print();
+          // Writes statechart as JSON.
+          this.fileController.saveUnnamedFile(text).then();
+          // console.log(text);
           return true;
         }
+      case 79: { // 'o'
+        let statechart;
+        function parse(text) {
+          statechart = JSON.parse(text);
+          console.log(statechart);
+        }
+        this.fileController.openFile().then(result => parse(result));
+        return true;
+      }
+      case 80: { // 'p'
+        this.print();
+        return true;
+      }
     }
   }
 }

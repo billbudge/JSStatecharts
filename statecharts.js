@@ -767,6 +767,7 @@ const normalMode = 1,
       hotTrackMode = 3,
       printMode = 4;
 
+// TODO add setModel method, so we can reuse renderer.
 function Renderer(model, theme) {
   this.model = model;
   model.renderer = this;
@@ -1520,6 +1521,37 @@ function Editor(model, theme, canvasController, paletteController, propertyGridC
   ]);
 }
 
+Editor.prototype.setModel = function(model) {
+  const self = this,
+        statechart = model.root;
+  this.model = model;
+  this.statechart = statechart;
+
+  this.changedItems_.clear()
+  this.changedTopLevelStates_.clear()
+
+  statechartModel.extend(model);
+  editingModel.extend(model);
+
+  const renderer = new Renderer(model, theme);
+  this.renderer = renderer;
+
+  model.dataModel.initialize();
+
+  // On attribute changes and item insertions, dynamically layout affected items.
+  // This allows us to layout transitions as their src or dst states are dragged.
+  model.observableModel.addHandler('changed', change => self.onChanged_(change));
+
+  // On ending transactions and undo/redo, layout the changed top level states.
+  function updateBounds() {
+    self.updateBounds_();
+  }
+  model.transactionModel.addHandler('transactionEnding', updateBounds);
+  model.transactionModel.addHandler('didUndo', updateBounds);
+  model.transactionModel.addHandler('didRedo', updateBounds);
+}
+
+// TODO move code to constructor?
 Editor.prototype.initialize = function(canvasController) {
   const renderer = this.renderer;
   // Layout any items in the statechart.

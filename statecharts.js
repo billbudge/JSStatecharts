@@ -1644,7 +1644,7 @@ const editingModel = (function() {
       }, isNonTransition);
 
       const bounds = renderer.getBounds(states);
-      const ctx = new C2S(bounds.width, bounds.height);
+      const ctx = new C2S(bounds.width + 1, bounds.height + 1);
       ctx.translate(-bounds.x, -bounds.y);
 
       renderer.begin(ctx);

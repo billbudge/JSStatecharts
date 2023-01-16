@@ -762,6 +762,8 @@ const editingModel = (function() {
 
 //------------------------------------------------------------------------------
 
+  // Statechart Renderer and helpers.
+
   const normalMode = 1,
         highlightMode = 2,
         hotTrackMode = 3,
@@ -1288,54 +1290,51 @@ const editingModel = (function() {
 
 //------------------------------------------------------------------------------
 
+  // Statechart Editor and helpers.
+
+  function isStateBorder(hitInfo, model) {
+    return isState(hitInfo.item) && hitInfo.border;
+  }
+
+  function isDraggable(hitInfo, model) {
+    return !isStatechart(hitInfo.item);
+  }
+
+  function isStateDropTarget(hitInfo, model) {
+    const item = hitInfo.item;
+    return isTrueStateOrStatechart(item) &&
+          !model.hierarchicalModel.isItemInSelection(item);
+  }
+
+  const connectTransitionSrc = 1,
+        connectTransitionDst = 2,
+        copyPaletteItem = 3,
+        moveSelection = 4,
+        moveCopySelection = 5,
+        resizeState = 6,
+        moveTransitionPoint = 7;
+
   class Editor {
-    constructor(model, theme, canvasController, paletteController, propertyGridController) {
+    constructor(theme, canvasController, paletteController, propertyGridController) {
       const self = this;
-      this.model = model;
-      const statechart = model.root;
-      this.statechart = statechart;
+      theme = extendTheme(theme);
+      this.theme = theme;
       this.canvasController = canvasController;
       this.paletteController = paletteController;
       this.propertyGridController = propertyGridController;
       this.fileController = new diagrams.FileController();
 
-
-      theme = extendTheme(theme);
-      this.theme = theme;
-
       this.hitTolerance = 8;
 
+      // TODO extend model with this info to avoid crosstalk between models.
       // Change tracking for layout.
       // Changed items that must be updated before drawing and hit testing.
       this.changedItems_ = new Set();
       // Changed top level states that must be updated during transactions and undo/redo.
       this.changedTopLevelStates_ = new Set();
 
-      statechartModel.extend(model);
-      editingModel.extend(model);
-
       const renderer = new Renderer(theme);
-      renderer.extend(model);
-      renderer.setModel(model);
       this.renderer = renderer;
-
-      model.dataModel.initialize();
-
-      // Set up convenience functions.
-      this.getTransitionSrc = model.referencingModel.getReferenceFn('srcId');
-      this.getTransitionDst = model.referencingModel.getReferenceFn('dstId');
-
-      // On attribute changes and item insertions, dynamically layout affected items.
-      // This allows us to layout transitions as their src or dst states are dragged.
-      model.observableModel.addHandler('changed', change => self.onChanged_(change));
-
-      // On ending transactions and undo/redo, layout the changed top level states.
-      function updateBounds() {
-        self.updateBounds_();
-      }
-      model.transactionModel.addHandler('transactionEnding', updateBounds);
-      model.transactionModel.addHandler('didUndo', updateBounds);
-      model.transactionModel.addHandler('didRedo', updateBounds);
 
       // Embed the palette items in a statechart so the renderer can do layout and drawing.
       this.palette = {
@@ -1452,19 +1451,13 @@ const editingModel = (function() {
           },
         ]);
     }
-    setModel(model) {
-      const self = this, statechart = model.root;
-      this.model = model;
-      this.statechart = statechart;
-
-      this.changedItems_.clear();
-      this.changedTopLevelStates_.clear();
+    initializeModel(model) {
+      const self = this;
 
       statechartModel.extend(model);
       editingModel.extend(model);
 
-      const renderer = new Renderer(model, theme);
-      this.renderer = renderer;
+      this.renderer.extend(model);
 
       model.dataModel.initialize();
 
@@ -1480,18 +1473,36 @@ const editingModel = (function() {
       model.transactionModel.addHandler('didUndo', updateBounds);
       model.transactionModel.addHandler('didRedo', updateBounds);
     }
-    // TODO move code to constructor?
-    initialize(canvasController) {
-      const renderer = this.renderer;
+    setModel(model) {
+      const statechart = model.root,
+            renderer = this.renderer;
+
+      this.model = model;
+      this.statechart = statechart;
+
+      this.changedItems_.clear();
+      this.changedTopLevelStates_.clear();
+
+      renderer.setModel(model);
+
       // Layout any items in the statechart.
       renderer.begin(this.canvasController.getCtx());
-      reverseVisitItem(this.statechart, item => renderer.layout(item));
+      reverseVisitItem(statechart, item => renderer.layout(item));
       renderer.end();
-      // Layout the palette items and their parent statechart.
-      renderer.begin(this.paletteController.getCtx());
-      reverseVisitItem(this.palette, item => renderer.layout(item));
-      // Draw the palette items.
-      visitItems(this.palette.items, item => renderer.draw(item));
+    }
+    initialize(canvasController) {
+      const renderer = this.renderer;
+      renderer.begin(canvasController.getCtx());
+      if (canvasController === this.paletteController) {
+      } else {
+        assert(canvasController === this.canvasController);
+        // Layout the palette items and their parent statechart.
+        renderer.begin(this.paletteController.getCtx());
+        reverseVisitItem(this.palette, item => renderer.layout(item));
+        // Draw the palette items.
+        visitItems(this.palette.items, item => renderer.draw(item));
+      }
+      renderer.end();
     }
     updateLayout_() {
       const renderer = this.renderer, changedItems = this.changedItems_;
@@ -1709,7 +1720,12 @@ const editingModel = (function() {
       this.propertyGridController.show(type, item);
     }
     onClick(canvasController, alt) {
-      const model = this.model, selectionModel = model.selectionModel, shiftKeyDown = this.canvasController.shiftKeyDown, cmdKeyDown = this.canvasController.cmdKeyDown, p = canvasController.getInitialPointerPosition(), cp = canvasController.viewToCanvas(p);
+      const model = this.model,
+            selectionModel = model.selectionModel,
+            shiftKeyDown = this.canvasController.shiftKeyDown,
+            cmdKeyDown = this.canvasController.cmdKeyDown,
+            p = canvasController.getInitialPointerPosition(),
+            cp = canvasController.viewToCanvas(p);
       let hitList, inPalette;
       if (canvasController === this.paletteController) {
         // Hit test the palette on top of the canvas.
@@ -1961,7 +1977,10 @@ const editingModel = (function() {
       this.canvasController.draw();
     }
     onBeginHover(canvasController) {
-      const model = this.model, p = canvasController.getCurrentPointerPosition(), hitList = this.hitTest(canvasController, p), hoverHitInfo = this.getFirstHit(hitList, isDraggable);
+      const model = this.model,
+            p = canvasController.getCurrentPointerPosition(),
+            hitList = this.hitTest(canvasController, p),
+            hoverHitInfo = this.getFirstHit(hitList, isDraggable);
       if (!hoverHitInfo)
         return false;
       const cp = canvasController.viewToCanvas(p);
@@ -1975,7 +1994,15 @@ const editingModel = (function() {
         this.hoverHitInfo = null;
     }
     onKeyDown(e) {
-      const model = this.model, statechart = this.statechart, renderer = model.renderer, selectionModel = model.selectionModel, editingModel = model.editingModel, transactionHistory = model.transactionHistory, keyCode = e.keyCode, cmdKey = e.ctrlKey || e.metaKey, shiftKey = e.shiftKey;
+      const self = this,
+            model = this.model,
+            statechart = this.statechart,
+            selectionModel = model.selectionModel,
+            editingModel = model.editingModel,
+            transactionHistory = model.transactionHistory,
+            keyCode = e.keyCode,
+            cmdKey = e.ctrlKey || e.metaKey,
+            shiftKey = e.shiftKey;
 
       if (keyCode === 8) { // 'delete'
         editingModel.doDelete();
@@ -2040,10 +2067,12 @@ const editingModel = (function() {
             return true;
           }
           case 79: { // 'o'
-            let statechart;
             function parse(text) {
-              statechart = JSON.parse(text);
-              console.log(statechart);
+              const statechart = JSON.parse(text),
+                    model = { root: statechart };
+              self.initializeModel(model);
+              self.setModel(model);
+              self.canvasController.draw();
             }
             this.fileController.openFile().then(result => parse(result));
             return true;
@@ -2057,53 +2086,12 @@ const editingModel = (function() {
     }
   }
 
-
-
-
-
-
-
-
-
-
-
-
-function isStateBorder(hitInfo, model) {
-  return isState(hitInfo.item) && hitInfo.border;
-}
-
-function isDraggable(hitInfo, model) {
-  return !isStatechart(hitInfo.item);
-}
-
-function isStateDropTarget(hitInfo, model) {
-  const item = hitInfo.item;
-  return isTrueStateOrStatechart(item) &&
-         !model.hierarchicalModel.isItemInSelection(item);
-}
-
-
-
-const connectTransitionSrc = 1,
-      connectTransitionDst = 2,
-      copyPaletteItem = 3,
-      moveSelection = 4,
-      moveCopySelection = 5,
-      resizeState = 6,
-      moveTransitionPoint = 7;
-
-
-
-
-
-
-
 return {
-  editingModel: editingModel,
-  statechartModel: statechartModel,
+  editingModel,
+  statechartModel,
 
-  Renderer: Renderer,
-  Editor: Editor,
+  Renderer,
+  Editor,
 };
 })();
 

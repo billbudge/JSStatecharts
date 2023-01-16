@@ -33,7 +33,10 @@
         paletteController = new diagrams.CanvasController(palette, theme),
         propertyGridController = new diagrams.PropertyGridController(body, theme),
         statechartEditor = new statecharts.Editor(
-            statechartModel, theme, canvasController, paletteController, propertyGridController);
+            theme, canvasController, paletteController, propertyGridController);
+
+  statechartEditor.initializeModel(statechartModel);
+  statechartEditor.setModel(statechartModel);
 
   document.bgColor = theme.bgColor;
 

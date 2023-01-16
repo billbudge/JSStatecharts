@@ -16,9 +16,13 @@ the number of states  in the system.
 # Getting Started
 
 At the top left of the canvas area, a floating palette contains the states and pseudostates needed to create
-a statechart. These can be clicked on and dragged onto the canvas area. There are some rules for pseudostates,
-principally that the solid black 'start' pseudostate must be unique in the statechart, as there can be only
-one starting state.
+a statechart. Palette items can be clicked on and dragged onto the canvas area.
+<figure>
+  <img src="/resources/palette.svg"  alt="" title="Primitive elements (literal and functions)">
+</figure>
+
+There are rules for pseudostates, principally that the solid black 'start' pseudostate must be unique in
+a statechart, as there can be only one starting state. Dragging another start state into a statechart is immediately undone by the editor.
 
 States and pseudostates on the canvas have an arrow shaped transition handle at their top right. These can be
 dragged and connected to other states, and even to the originating state for a "self transition". Note that
@@ -36,9 +40,6 @@ TBD selecting states and transitions
 
 States can be dragged and dropped onto other states.
 
-<figure>
-  <img src="/resources/palette.svg"  alt="" title="Primitive elements (literal and functions)">
-</figure>
 
 
 

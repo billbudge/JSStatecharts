@@ -1635,7 +1635,9 @@ const editingModel = (function() {
       }
     }
     print() {
-      const renderer = this.renderer, statechart = this.statechart, model = this.model, selectionModel = model.selectionModel, editingModel = model.editingModel, canvasController = this.canvasController;
+      const renderer = this.renderer,
+            statechart = this.statechart,
+            canvasController = this.canvasController;
 
       // Calculate document bounds.
       const states = new Array();
@@ -1644,8 +1646,9 @@ const editingModel = (function() {
       }, isNonTransition);
 
       const bounds = renderer.getBounds(states);
-      const ctx = new C2S(bounds.width + 1, bounds.height + 1);
-      ctx.translate(-bounds.x, -bounds.y);
+      // Adjust all edges 1 pixel out.
+      const ctx = new C2S(bounds.width + 2, bounds.height + 2);
+      ctx.translate(-bounds.x + 1, -bounds.y + 1);
 
       renderer.begin(ctx);
       // We shouldn't need to layout any changed items here.

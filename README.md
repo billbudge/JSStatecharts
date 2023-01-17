@@ -17,15 +17,23 @@ the number of states  in the system.
 
 At the top left of the canvas area, a floating palette contains the states and pseudostates used to create
 a statechart. The top row of the palette contains the pseudo-states 'start', 'stop', 'shallow history',
-and 'deep history'. The bottom row contains a 'new state'. Items in the palette can be dragged onto the empty canvas area, and onto any states that are on the canvas, in order to create super-states.
+and 'deep history'. The bottom row contains a 'new state'.
 <figure>
-  <img src="/resources/palette.svg"  alt="" title="Primitive elements (literal and functions)">
+  <img src="/resources/palette.svg"  alt="" title="Palette states and pseudostates.">
+</figure>
+
+Items in the palette can be dragged onto the empty canvas area, and onto any states that are on the canvas, in order to create superstates.
+<figure>
+  <img src="/resources/superstate.svg"  alt="" title="A super state.">
 </figure>
 
 There are rules for pseudostates, principally that the solid black 'start' pseudostate must be unique in
 a statechart, as there can be only one starting state. Dragging another start state onto the root statechart
-is immediately undone by the editor. However, adding another start state to a state causes a new statechart
-to be added to the state, in order to create parallel or concurrent statecharts in a super-state.
+is immediately undone by the editor. However, adding another start state to a superstate causes a new
+statechart to be added to the state, in order to create parallel or concurrent statecharts in a superstate.
+<figure>
+  <img src="/resources/superstate_with_starts.svg"  alt="" title="A super state with concurrent machines, created by dropping two start states in a state.">
+</figure>
 
 States and pseudostates on the canvas have an arrow shaped transition handle at their top right. These can be
 dragged and connected to other states, and even to the originating state for a "self transition". Note that

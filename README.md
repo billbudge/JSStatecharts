@@ -22,7 +22,8 @@ and 'deep history'. The bottom row contains a 'new state'.
   <img src="/resources/palette.svg"  alt="" title="Palette states and pseudostates.">
 </figure>
 
-Items in the palette can be dragged onto the empty canvas area, and onto any states that are on the canvas, in order to create superstates.
+Items in the palette can be dragged onto the empty canvas area, and onto any states that are on the canvas, in order to create superstates. Superstates are automatically laid out to entirely contain their child states.
+In addition, the editor allows states to be resized manually, by dragging the edges or corners of states.
 <figure>
   <img src="/resources/superstate.svg"  alt="" title="A super state.">
 </figure>
@@ -39,7 +40,11 @@ States and pseudostates on the canvas have an arrow shaped transition handle at 
 dragged and connected to other states, and even to the originating state for a "self transition". Note that
 transitions have an arrow indicating the direction from source to destination. As with pseudostates, there
 are some restrictions on transitions involving pseudostates. A 'start' pseudostate can only be the source of
-a transition, while an 'end' pseudostate can only be the destination of a transition.
+a transition, while an 'end' pseudostate can only be the destination of a transition. The editor enforces
+these restrictions, not allowing illegal transitions to be created.
+<figure>
+  <img src="/resources/transitions.svg"  alt="" title="Transitions in a superstate.">
+</figure>
 
 # Selection
 

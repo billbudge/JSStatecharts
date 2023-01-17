@@ -1647,8 +1647,9 @@ const editingModel = (function() {
 
       const bounds = renderer.getBounds(states);
       // Adjust all edges 1 pixel out.
-      const ctx = new C2S(bounds.width + 2, bounds.height + 2);
-      ctx.translate(-bounds.x + 1, -bounds.y + 1);
+      const ctx = new C2S(bounds.width * 2 + 4, bounds.height * 2 + 4);
+      ctx.scale(1.5, 1.5);
+      ctx.translate(-bounds.x + 2, -bounds.y + 2);
 
       renderer.begin(ctx);
       // We shouldn't need to layout any changed items here.

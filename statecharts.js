@@ -1491,18 +1491,18 @@ const editingModel = (function() {
       renderer.end();
     }
     initialize(canvasController) {
-      const renderer = this.renderer;
-      renderer.begin(canvasController.getCtx());
-      if (canvasController === this.paletteController) {
+      if (canvasController === this.canvasController) {
       } else {
-        assert(canvasController === this.canvasController);
+        const renderer = this.renderer;
+        assert(canvasController === this.paletteController);
+        renderer.begin(canvasController.getCtx());
         // Layout the palette items and their parent statechart.
-        renderer.begin(this.paletteController.getCtx());
+        renderer.begin(canvasController.getCtx());
         reverseVisitItem(this.palette, item => renderer.layout(item));
         // Draw the palette items.
         visitItems(this.palette.items, item => renderer.draw(item));
+        renderer.end();
       }
-      renderer.end();
     }
     updateLayout_() {
       const renderer = this.renderer, changedItems = this.changedItems_;

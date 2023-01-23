@@ -1677,8 +1677,14 @@ const editingModel = (function() {
       // into the canvas space to render the drag and drop.
       return this.canvasController.viewToOtherCanvasView(canvasController, p);
     }
-    hitTest(canvasController, p) {
-      const renderer = this.renderer, tol = this.hitTolerance, statechart = this.statechart, cp = this.getCanvasPosition(canvasController, p), ctx = canvasController.getCtx(), hitList = [];
+    hitTestCanvas(p) {
+      const renderer = this.renderer,
+            tol = this.hitTolerance,
+            statechart = this.statechart,
+            canvasController = this.canvasController,
+            cp = this.getCanvasPosition(canvasController, p),
+            ctx = canvasController.getCtx(),
+            hitList = [];
       function pushInfo(info) {
         if (info)
           hitList.push(info);
@@ -1696,8 +1702,11 @@ const editingModel = (function() {
       renderer.end();
       return hitList;
     }
-    hitTestPalette(canvasController, p) {
-      const renderer = this.renderer, tol = this.hitTolerance, ctx = canvasController.getCtx(), hitList = [];
+    hitTestPalette(p) {
+      const renderer = this.renderer,
+            tol = this.hitTolerance,
+            ctx = this.paletteController.getCtx(),
+            hitList = [];
       function pushInfo(info) {
         if (info)
           hitList.push(info);
@@ -1720,7 +1729,9 @@ const editingModel = (function() {
       return null;
     }
     setPropertyGrid() {
-      const model = this.model, item = model.selectionModel.lastSelected(), type = item ? item.type : undefined;
+      const model = this.model,
+            item = model.selectionModel.lastSelected(),
+            type = item ? item.type : undefined;
       this.propertyGridController.show(type, item);
     }
     onClick(canvasController, alt) {
@@ -1733,11 +1744,11 @@ const editingModel = (function() {
       let hitList, inPalette;
       if (canvasController === this.paletteController) {
         // Hit test the palette on top of the canvas.
-        hitList = this.hitTestPalette(canvasController, cp);
+        hitList = this.hitTestPalette(cp);
         inPalette = true;
       } else {
         assert(canvasController === this.canvasController);
-        hitList = this.hitTest(canvasController, cp);
+        hitList = this.hitTestCanvas(cp);
         inPalette = false;
       }
       const mouseHitInfo = this.mouseHitInfo = this.getFirstHit(hitList, isDraggable);
@@ -1765,10 +1776,15 @@ const editingModel = (function() {
       const mouseHitInfo = this.mouseHitInfo;
       if (!mouseHitInfo)
         return false;
-      const model = this.model, editingModel = model.editingModel, selectionModel = model.selectionModel, dragItem = mouseHitInfo.item, p0 = canvasController.getInitialPointerPosition();
+      const model = this.model,
+            editingModel = model.editingModel,
+            selectionModel = model.selectionModel,
+            dragItem = mouseHitInfo.item,
+            p0 = canvasController.getInitialPointerPosition();
       let drag, newTransition;
       if (mouseHitInfo.arrow) {
-        const stateId = model.dataModel.getId(dragItem), cp0 = this.getCanvasPosition(canvasController, p0);
+        const stateId = model.dataModel.getId(dragItem),
+              cp0 = this.getCanvasPosition(canvasController, p0);
         // Start the new transition as connecting the src state to itself.
         newTransition = {
           type: 'transition',
@@ -1872,7 +1888,24 @@ const editingModel = (function() {
       const drag = this.drag;
       if (!drag)
         return;
-      const dragItem = drag.item, model = this.model, dataModel = model.dataModel, observableModel = model.observableModel, transactionModel = model.transactionModel, referencingModel = model.referencingModel, selectionModel = model.selectionModel, editingModel = model.editingModel, renderer = this.renderer, p0 = canvasController.getInitialPointerPosition(), cp0 = this.getCanvasPosition(canvasController, p0), p = canvasController.getCurrentPointerPosition(), cp = this.getCanvasPosition(canvasController, p), dx = cp.x - cp0.x, dy = cp.y - cp0.y, mouseHitInfo = this.mouseHitInfo, snapshot = transactionModel.getSnapshot(dragItem), hitList = this.hitTest(canvasController, p);
+      const dragItem = drag.item,
+            model = this.model,
+            dataModel = model.dataModel,
+            observableModel = model.observableModel,
+            transactionModel = model.transactionModel,
+            referencingModel = model.referencingModel,
+            selectionModel = model.selectionModel,
+            editingModel = model.editingModel,
+            renderer = this.renderer,
+            p0 = canvasController.getInitialPointerPosition(),
+            cp0 = this.getCanvasPosition(canvasController, p0),
+            p = canvasController.getCurrentPointerPosition(),
+            cp = this.getCanvasPosition(canvasController, p),
+            dx = cp.x - cp0.x,
+            dy = cp.y - cp0.y,
+            mouseHitInfo = this.mouseHitInfo,
+            snapshot = transactionModel.getSnapshot(dragItem),
+            hitList = this.hitTestCanvas(p);
       let hitInfo;
       switch (drag.type) {
         case copyPaletteItem:
@@ -1907,7 +1940,8 @@ const editingModel = (function() {
           const srcId = hitInfo ? dataModel.getId(hitInfo.item) : 0; // 0 is invalid id
           if (srcId && editingModel.isValidTransition(hitInfo.item, dst)) {
             observableModel.changeValue(dragItem, 'srcId', srcId);
-            const src = referencingModel.getReference(dragItem, 'srcId'), t1 = renderer.statePointToParam(src, cp);
+            const src = referencingModel.getReference(dragItem, 'srcId'),
+                  t1 = renderer.statePointToParam(src, cp);
             observableModel.changeValue(dragItem, 't1', t1);
           } else {
             observableModel.changeValue(dragItem, 'srcId', 0);
@@ -1926,7 +1960,8 @@ const editingModel = (function() {
           const dstId = hitInfo ? dataModel.getId(hitInfo.item) : 0; // 0 is invalid id
           if (dstId && editingModel.isValidTransition(src, hitInfo.item)) {
             observableModel.changeValue(dragItem, 'dstId', dstId);
-            const dst = referencingModel.getReference(dragItem, 'dstId'), t2 = renderer.statePointToParam(dst, cp);
+            const dst = referencingModel.getReference(dragItem, 'dstId'),
+                  t2 = renderer.statePointToParam(dst, cp);
             observableModel.changeValue(dragItem, 't2', t2);
           } else {
             observableModel.changeValue(dragItem, 'dstId', 0);
@@ -1936,7 +1971,7 @@ const editingModel = (function() {
           break;
         }
         case moveTransitionPoint: {
-          hitInfo = this.renderer.hitTest(dragItem, cp, this.hitTolerance, normalMode);
+          hitInfo = renderer.hitTest(dragItem, cp, this.hitTolerance, normalMode);
           if (hitInfo)
             observableModel.changeValue(dragItem, 'pt', hitInfo.t);
 
@@ -1952,13 +1987,21 @@ const editingModel = (function() {
       const drag = this.drag;
       if (!drag)
         return;
-      const model = this.model, statechart = this.statechart, selectionModel = model.selectionModel, transactionModel = model.transactionModel, editingModel = model.editingModel, p = canvasController.getCurrentPointerPosition(), dragItem = drag.item;
+      const model = this.model,
+            statechart = this.statechart,
+            selectionModel = model.selectionModel,
+            transactionModel = model.transactionModel,
+            editingModel = model.editingModel,
+            p = canvasController.getCurrentPointerPosition(),
+            dragItem = drag.item;
       if (isTransition(dragItem)) {
         dragItem[_p1] = dragItem[_p2] = undefined;
       } else if (drag.type == copyPaletteItem || drag.type === moveSelection ||
         drag.type === moveCopySelection) {
         // Find state beneath mouse.
-        const hitList = this.hitTest(canvasController, p), hitInfo = this.getFirstHit(hitList, isStateDropTarget), parent = hitInfo ? hitInfo.item : statechart;
+        const hitList = this.hitTestCanvas(p),
+              hitInfo = this.getFirstHit(hitList, isStateDropTarget),
+              parent = hitInfo ? hitInfo.item : statechart;
         // Reparent items.
         selectionModel.contents().forEach(function (item) {
           editingModel.addItem(item, parent);
@@ -1981,9 +2024,10 @@ const editingModel = (function() {
       this.canvasController.draw();
     }
     onBeginHover(canvasController) {
+      // TODO hover over palette items?
       const model = this.model,
             p = canvasController.getCurrentPointerPosition(),
-            hitList = this.hitTest(canvasController, p),
+            hitList = this.hitTestCanvas(p),
             hoverHitInfo = this.getFirstHit(hitList, isDraggable);
       if (!hoverHitInfo)
         return false;

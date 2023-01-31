@@ -976,24 +976,41 @@ const editingModel = (function() {
       }
     }
     layoutTransition(transition) {
-      const self = this, src = this.getTransitionSrc(transition), dst = this.getTransitionDst(transition), p1 = src ? this.stateParamToPoint(src, transition.t1) : transition[_p1], p2 = dst ? this.stateParamToPoint(dst, transition.t2) : transition[_p2];
+      const self = this,
+            src = this.getTransitionSrc(transition),
+            dst = this.getTransitionDst(transition),
+            p1 = src ? this.stateParamToPoint(src, transition.t1) : transition[_p1],
+            p2 = dst ? this.stateParamToPoint(dst, transition.t2) : transition[_p2];
       // If we're in an intermediate state, don't layout.
       if (!p1 || !p2)
         return;
-      function projectToCircle(pseudoState, p1, p2) {
-        const length = geometry.lineLength(p1.x, p1.y, p2.x, p2.y), nx = (p2.x - p1.x) / length, ny = (p2.y - p1.y) / length, radius = self.theme.radius, bbox = self.getItemRect(pseudoState);
-        p1.x = bbox.x + bbox.width / 2 + nx * radius;
-        p1.y = bbox.y + bbox.height / 2 + ny * radius;
-        p1.nx = nx;
-        p1.ny = ny;
+      function getCenter(state) {
+        const bbox = self.getItemRect(state);
+        return {
+          x: bbox.x + bbox.width * 0.5,
+          y: bbox.y + bbox.height * 0.5,
+        }
       }
+      const bezier = diagrams.getEdgeBezier(p1, p2);
       if (src && isPseudostate(src)) {
-        projectToCircle(src, p1, p2);
+        // Adjust the bezier's p1 and c1 to start on the boundary, towards bezier c2.
+        const to = bezier[2],
+              center = getCenter(src),
+              radius = this.theme.radius,
+              projection = geometry.projectPointToCircle(to, center, radius);
+        bezier[0] = projection;
+        bezier[1] = to;
       }
       if (dst && isPseudostate(dst)) {
-        projectToCircle(dst, p2, p1);
+        // Adjust the bezier's c2 and p2 to end on the boundary, towards bezier c1.
+        const to = bezier[1],
+              center = getCenter(dst),
+              radius = this.theme.radius,
+              projection = geometry.projectPointToCircle(to, center, radius);
+        bezier[3] = projection;
+        bezier[2] = to;
       }
-      transition[_bezier] = diagrams.getEdgeBezier(p1, p2);
+      transition[_bezier] = bezier;
       transition[_textT] = geometry.evaluateBezier(transition[_bezier], transition.pt);
       let text = '', textWidth = 0;
       if (transition.event) {
@@ -1743,7 +1760,6 @@ const editingModel = (function() {
             cp = canvasController.viewToCanvas(p);
       let hitList, inPalette;
       if (canvasController === this.paletteController) {
-        // Hit test the palette on top of the canvas.
         hitList = this.hitTestPalette(cp);
         inPalette = true;
       } else {
@@ -1757,7 +1773,6 @@ const editingModel = (function() {
         if (inPalette) {
           mouseHitInfo.inPalette = true;
           selectionModel.clear();
-          // this.paletteController.transferPointer(this.canvasController);
         } else if (cmdKeyDown) {
           mouseHitInfo.moveCopy = true;
           selectionModel.select(item);

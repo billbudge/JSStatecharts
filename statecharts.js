@@ -898,7 +898,12 @@ const editingModel = (function() {
     }
     // Layout a state.
     layoutState(state) {
-      const self = this, theme = this.theme, textSize = theme.fontSize, textLeading = theme.textLeading, lineSpacing = textSize + textLeading, observableModel = this.model.observableModel;
+      const self = this,
+            theme = this.theme,
+            textSize = theme.fontSize,
+            textLeading = theme.textLeading,
+            lineSpacing = textSize + textLeading,
+            observableModel = this.model.observableModel;
 
       let width = 0, height = lineSpacing;
 
@@ -918,10 +923,6 @@ const editingModel = (function() {
         });
 
         height = Math.max(height, stateOffsetY);
-        // Expand the last statechart to fill its parent state.
-        const lastStatechart = statecharts[statecharts.length - 1];
-        observableModel.changeValue(lastStatechart, 'height',
-          lastStatechart.height + height - stateOffsetY);
       }
       if (state.entry) {
         state[_entryText] = 'entry/ ' + state.entry;
@@ -941,6 +942,13 @@ const editingModel = (function() {
       height = Math.max(height, state.height);
       observableModel.changeValue(state, 'width', width);
       observableModel.changeValue(state, 'height', height);
+
+      if (statecharts && statecharts.length > 0) {
+        // Expand the last statechart to fill its parent state.
+        const lastStatechart = statecharts[statecharts.length - 1];
+        observableModel.changeValue(lastStatechart, 'height',
+          lastStatechart.height + height - stateOffsetY);
+      }
     }
     // Make sure a statechart is big enough to enclose its contents. Statecharts
     // are always sized automatically to contain their contents and fit tightly in
@@ -991,7 +999,8 @@ const editingModel = (function() {
           y: bbox.y + bbox.height * 0.5,
         }
       }
-      const bezier = diagrams.getEdgeBezier(p1, p2);
+      const scaleFactor = src === dst ? 64 : 0,
+            bezier = diagrams.getEdgeBezier(p1, p2, scaleFactor);
       if (src && isPseudostate(src)) {
         // Adjust the bezier's p1 and c1 to start on the boundary, towards bezier c2.
         const to = bezier[2],
@@ -2082,16 +2091,14 @@ const editingModel = (function() {
             if (transactionHistory.getUndo()) {
               selectionModel.clear();
               transactionHistory.undo();
-              return true;
             }
-            return false;
+            return true;
           case 89: // 'y'
             if (transactionHistory.getRedo()) {
               selectionModel.clear();
               transactionHistory.redo();
-              return true;
             }
-            return false;
+            return true;
           case 88: // 'x'
             editingModel.doCut();
             return true;

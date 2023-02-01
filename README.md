@@ -36,7 +36,12 @@ that are more properly edited as text or enumerations. When a state is selected,
 # Selection
 States and transitions can be selected by the user. The Shift and Control/Command keys can be used to extend the current selection. Control/Command 'a' will select all states and transitions on the canvas. Finally, Command/Control 'e' will extend the selected states to all connected states.
 
+# Example Statecharts
 
+Here is a statechart describing a simplified ATM behavior.
+<figure>
+  <img src="/resources/ATM_statechart.svg"  alt="" title="Simplfied ATM statechart.">
+</figure>
 
 
 

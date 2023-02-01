@@ -1221,8 +1221,9 @@ const editingModel = (function() {
           ctx.strokeStyle = theme.strokeColor;
           ctx.lineWidth = 1;
           ctx.stroke();
+          const pt = transition[_textT];
           if (mode !== printMode) {
-            const pt = transition[_textT], r = theme.radius / 2;
+            const r = theme.radius / 2;
             diagrams.roundRectPath(pt.x - r,
               pt.y - r,
               theme.radius, theme.radius, r, ctx);
@@ -1230,9 +1231,9 @@ const editingModel = (function() {
             ctx.fill();
             ctx.lineWidth = 0.25;
             ctx.stroke();
-            ctx.fillStyle = theme.textColor;
-            ctx.fillText(transition[_text], pt.x + theme.padding, pt.y + theme.fontSize);
           }
+          ctx.fillStyle = theme.textColor;
+          ctx.fillText(transition[_text], pt.x + theme.padding, pt.y + theme.fontSize);
           break;
         case highlightMode:
           ctx.strokeStyle = theme.highlightColor;
@@ -1669,7 +1670,7 @@ const editingModel = (function() {
       const states = new Array();
       visitItems(statechart.items, function (item) {
         states.push(item);
-      }, isNonTransition);
+      });
 
       const bounds = renderer.getBounds(states);
       // Adjust all edges 1 pixel out.

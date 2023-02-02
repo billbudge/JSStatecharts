@@ -38,9 +38,14 @@ States and transitions can be selected by the user. The Shift and Control/Comman
 
 # Example Statecharts
 
-Here is a statechart describing a simplified ATM behavior.
+A simplified Statechart for a bank ATM.
 <figure>
   <img src="/resources/ATM_statechart.svg"  alt="" title="Simplfied ATM statechart.">
+</figure>
+
+Another simplified Statechart for a bank ATM.
+<figure>
+  <img src="/resources/ATM_statechart2.svg"  alt="" title="Simplfied ATM statechart number 2.">
 </figure>
 
 

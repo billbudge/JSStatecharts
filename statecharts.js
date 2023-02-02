@@ -2067,8 +2067,8 @@ const editingModel = (function() {
         this.hoverHitInfo = null;
     }
     onKeyDown(e) {
-      // The Editor only implements keyboard commands for the canvas area.
-      if (document.activeElement !== this.canvasController.getCanvas())
+      // The Editor only implements keyboard commands for the document body.
+      if (document.activeElement !== document.body)
         return false;
 
       const self = this,

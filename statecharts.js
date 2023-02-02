@@ -2067,6 +2067,10 @@ const editingModel = (function() {
         this.hoverHitInfo = null;
     }
     onKeyDown(e) {
+      // The Editor only implements keyboard commands for the canvas area.
+      if (document.activeElement !== this.canvasController.getCanvas())
+        return false;
+
       const self = this,
             model = this.model,
             statechart = this.statechart,

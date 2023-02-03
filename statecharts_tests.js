@@ -2,7 +2,7 @@
 
 const statechartTests = (function () {
   'use strict';
-  
+
   function newStatechart() {
     return {
       root: {  // dataModels default is model.root for data.
@@ -13,7 +13,7 @@ const statechartTests = (function () {
       }
     };
   }
-  
+
   let id = 1;
   function newState(x, y) {
     return {
@@ -23,7 +23,7 @@ const statechartTests = (function () {
       y: y || 0,
     };
   }
-  
+
   function newPseudoState(type, x, y) {
     return {
       type: type,
@@ -31,11 +31,11 @@ const statechartTests = (function () {
       y: y || 0,
     };
   }
-  
+
   function getId(item) {
     return item.id;
   }
-  
+
   function newTransition(src, dst) {
     return {
       type: 'transition',
@@ -43,7 +43,7 @@ const statechartTests = (function () {
       dstId: getId(dst),
     }
   }
-  
+
   // Always construct the full EditingModel to make creating test data easier.
   function newTest() {
     let statechart = newStatechart();
@@ -51,7 +51,7 @@ const statechartTests = (function () {
         model = test.model;
     statecharts.statechartModel.extend(statechart);
     test.model.dataModel.initialize();
-  
+
     // Fake context, sufficient for tests.
     const ctx = {
       measureText: () => { return { width: 10, height: 10 }},
@@ -61,11 +61,11 @@ const statechartTests = (function () {
     model.renderer.begin(ctx);
     return test;
   }
-  
+
   function newTestEditingModel() {
     return newTest().model.editingModel;
   }
-  
+
   function newTestStatechartModel() {
     return newTest().model.statechartModel;
   }
@@ -76,21 +76,21 @@ const statechartTests = (function () {
             result = editingModel.addItem(newItem, parent);
       return result;
     }
-  
+
   QUnit.test("statecharts.statechartModel.extend", function() {
     let test = newTestStatechartModel();
     QUnit.assert.ok(test);
     QUnit.assert.ok(test.model);
     QUnit.assert.ok(test.model.referencingModel);
   });
-  
+
   QUnit.test("statecharts.statechartModel.extend", function() {
     let test = newTestStatechartModel();
     QUnit.assert.ok(test);
     QUnit.assert.ok(test.model);
     QUnit.assert.ok(test.model.referencingModel);
   });
-  
+
   QUnit.test("statecharts.statechartModel.getGraphInfo", function() {
     const test = newTestStatechartModel(),
           model = test.model,
@@ -99,7 +99,7 @@ const statechartTests = (function () {
           state2 = addItem(test, newState()),
           transition1 = addItem(test, newTransition(state1, state2));
     let graph;
-  
+
     graph = test.getGraphInfo([state1, state2]);
     QUnit.assert.ok(graph.statesAndStatecharts.has(state1));
     QUnit.assert.ok(graph.statesAndStatecharts.has(state2));
@@ -109,12 +109,12 @@ const statechartTests = (function () {
     QUnit.assert.deepEqual(graph.interiorTransitions.size, 1);
     QUnit.assert.deepEqual(graph.inTransitions.size, 0);
     QUnit.assert.deepEqual(graph.outTransitions.size, 0);
-  
+
     const input = addItem(test, newState()),
           output = addItem(test, newState()),
           transition2 = addItem(test, newTransition(input, state1)),
           transition3 = addItem(test, newTransition(state2, output));
-  
+
     graph = test.getGraphInfo();
     QUnit.assert.ok(graph.statesAndStatecharts.has(state1));
     QUnit.assert.ok(graph.statesAndStatecharts.has(state2));
@@ -129,7 +129,7 @@ const statechartTests = (function () {
     QUnit.assert.deepEqual(graph.inTransitions.size, 0);
     QUnit.assert.deepEqual(graph.outTransitions.size, 0);
   });
-  
+
   QUnit.test("statecharts.statechartModel.getSubgraphInfo", function() {
     const test = newTestStatechartModel(),
           model = test.model,
@@ -138,7 +138,7 @@ const statechartTests = (function () {
           state2 = addItem(test, newState()),
           transition1 = addItem(test, newTransition(state1, state2));
     let subgraph;
-  
+
     subgraph = test.getSubgraphInfo([state1, state2]);
     QUnit.assert.ok(subgraph.statesAndStatecharts.has(state1));
     QUnit.assert.ok(subgraph.statesAndStatecharts.has(state2));
@@ -148,12 +148,12 @@ const statechartTests = (function () {
     QUnit.assert.deepEqual(subgraph.interiorTransitions.size, 1);
     QUnit.assert.deepEqual(subgraph.inTransitions.size, 0);
     QUnit.assert.deepEqual(subgraph.outTransitions.size, 0);
-  
+
     const input = addItem(test, newState()),
           output = addItem(test, newState()),
           transition2 = addItem(test, newTransition(input, state1)),
           transition3 = addItem(test, newTransition(state2, output));
-  
+
     subgraph = test.getSubgraphInfo([state1, state2]);
     QUnit.assert.ok(subgraph.statesAndStatecharts.has(state1));
     QUnit.assert.ok(subgraph.statesAndStatecharts.has(state2));
@@ -166,13 +166,13 @@ const statechartTests = (function () {
     QUnit.assert.ok(subgraph.outTransitions.has(transition3));
     QUnit.assert.deepEqual(subgraph.outTransitions.size, 1);
   });
-  
+
   function testIterator(fn, element, items) {
     const iterated = [];
     fn(element, (item) => iterated.push(item));
     QUnit.assert.deepEqual(items, iterated);
   }
-  
+
   QUnit.test("statecharts.statechartModel.iterators", function() {
     const test = newTestStatechartModel(),
           model = test.model,
@@ -185,7 +185,7 @@ const statechartTests = (function () {
           transition2 = addItem(test, newTransition(input, state1)),
           transition3 = addItem(test, newTransition(input, state2)),
           transition4 = addItem(test, newTransition(state2, output));
-  
+
     const inputFn = test.forInTransitions.bind(test),
           outputFn = test.forOutTransitions.bind(test);
     testIterator(inputFn, input, []);
@@ -195,7 +195,7 @@ const statechartTests = (function () {
     testIterator(inputFn, state2, [transition1, transition3]);
     testIterator(outputFn, state2, [transition4]);
   });
-  
+
   QUnit.test("statecharts.editingModel", function() {
     const test = newTestEditingModel(),
           model = test.model,
@@ -205,11 +205,11 @@ const statechartTests = (function () {
     QUnit.assert.ok(model.dataModel);
     QUnit.assert.ok(model.selectionModel);
   });
-  
+
   function doInitialize(item) {
     item.initalized = true;
   }
-  
+
   QUnit.test("statecharts.editingModel.newItem", function() {
     const test = newTestEditingModel(),
           model = test.model,
@@ -220,7 +220,7 @@ const statechartTests = (function () {
     QUnit.assert.ok(item1.id);
     QUnit.assert.ok(item1.initalized);
   });
-  
+
   QUnit.test("statecharts.editingModel.addAndDeleteItems", function() {
     const test = newTestEditingModel(),
           model = test.model,
@@ -235,7 +235,7 @@ const statechartTests = (function () {
     test.deleteItem(item1);
     QUnit.assert.deepEqual(statechart.items, []);
   });
-  
+
   QUnit.test("statecharts.editingModel.findChildStatechart", function() {
     let test = newTestEditingModel(),
         items = test.model.root.items,
@@ -259,7 +259,7 @@ const statechartTests = (function () {
     QUnit.assert.ok(test.findChildStatechart(superState, state) === 0);
     QUnit.assert.ok(test.findChildStatechart(superState, start) === -1);
   });
- 
+
   QUnit.test("statecharts.editingModel.canAddState", function() {
     const test = newTestEditingModel(),
           statechart = test.model.root,
@@ -314,20 +314,24 @@ const statechartTests = (function () {
     QUnit.assert.notOk(test.isValidTransition(state1, start));
     QUnit.assert.ok(test.isValidTransition(start, shallowHistory));
     QUnit.assert.ok(test.isValidTransition(start, deepHistory));
-  
+
     // Convert state1 to a superstate with two sub-statecharts.
     const start1 = addItem(test, newPseudoState('start'), state1),
           statechart1 = state1.items[0],
           subState1 = addItem(test, newState(), statechart1),
           start2 = addItem(test, newPseudoState('start'), state1),
           statechart2 = state1.items[1],
-          subState2 = addItem(test, newState(), statechart2);
+          subState2 = addItem(test, newState(), statechart2),
+          subHistory = addItem(test, newPseudoState('history'), state1);
     // No transitions between sibling statecharts.
     QUnit.assert.notOk(test.isValidTransition(start2, subState1));
     QUnit.assert.notOk(test.isValidTransition(start1, subState2));
     // No transitions from pseudo-state outside it's parent statechart.
     QUnit.assert.notOk(test.isValidTransition(start1, state2));
     QUnit.assert.notOk(test.isValidTransition(state2, start2));
+    // Transitions are allowed from parent state to child state.
+    QUnit.assert.ok(test.isValidTransition(state1, subHistory));
+    QUnit.assert.ok(test.isValidTransition(state1, subState1));
   });
 
   QUnit.test("statecharts.editingModel.isValidStatechart", function() {
@@ -368,12 +372,11 @@ const statechartTests = (function () {
           state1 = addItem(test, newState()),
           state2 = addItem(test, newState()),
           transition = addItem(test, newTransition(state1, state2));
-  
+
     // Remove element and make sure dependent wire is also deleted.
     test.deleteItem(state1);
     test.makeConsistent();
     QUnit.assert.ok(!items.includes(transition));
-  });  
+  });
 
 })();
-  

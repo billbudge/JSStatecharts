@@ -414,6 +414,12 @@ const editingModel = (function() {
       return this.model.hierarchicalModel.getParent(item);
     },
 
+    getGrandParent: function(item) {
+      const parent = this.getParent(item);
+      if (!parent) return parent;
+      return this.getParent(parent);
+    },
+
     reduceSelection: function () {
       const model = this.model;
       model.selectionModel.set(model.hierarchicalModel.reduceSelection());
@@ -512,9 +518,12 @@ const editingModel = (function() {
         return srcParent == dstParent;
       }
       // Transitions can't straddle parallel statecharts. The lowest common ancestor
-      // of src and dst must be a statechart, not a state.
+      // of src and dst must be a statechart, not a state, except for "inside" transitions.
       const hierarchicalModel = this.model.hierarchicalModel,
             lca = hierarchicalModel.getLowestCommonAncestor(src, dst);
+      // Allow transitions between a super state and its child states.
+      if (isState(lca))
+        return src === this.getGrandParent(dst);
       return isStatechart(lca);
     },
 
@@ -997,6 +1006,15 @@ const editingModel = (function() {
         return {
           x: bbox.x + bbox.width * 0.5,
           y: bbox.y + bbox.height * 0.5,
+        }
+      }
+      // If it's an "inside" transition, flip the source normal.
+      if (src && dst) {
+        const hierarchicalModel = this.model.hierarchicalModel,
+              dstGrandParent = hierarchicalModel.getParent(hierarchicalModel.getParent(dst));
+        if (src === dstGrandParent) {
+          p1.nx = -p1.nx;
+          p1.ny = -p1.ny;
         }
       }
       const scaleFactor = src === dst ? 64 : 0,
@@ -2027,13 +2045,14 @@ const editingModel = (function() {
             transactionModel = model.transactionModel,
             editingModel = model.editingModel,
             p = canvasController.getCurrentPointerPosition(),
+            cp = this.getCanvasPosition(canvasController, p),
             dragItem = drag.item;
       if (isTransition(dragItem)) {
         dragItem[_p1] = dragItem[_p2] = undefined;
       } else if (drag.type == copyPaletteItem || drag.type === moveSelection ||
         drag.type === moveCopySelection) {
         // Find state beneath mouse.
-        const hitList = this.hitTestCanvas(p),
+        const hitList = this.hitTestCanvas(cp),
               hitInfo = this.getFirstHit(hitList, isStateDropTarget),
               parent = hitInfo ? hitInfo.item : statechart;
         // Reparent items.

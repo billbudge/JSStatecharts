@@ -48,6 +48,11 @@ Another simplified Statechart for a bank ATM.
   <img src="/resources/ATM_statechart2.svg"  alt="" title="Simplfied ATM statechart number 2.">
 </figure>
 
+As a stress test, the full Citizen Quart Multi-Alarm Statechart from Harel's paper.
+<figure>
+  <img src="/resources/CitizenQuartMultiAlarm.svg"  alt="" title="Citizen Quartz Multi-alarm watch from David Harel's Statechart paper.">
+</figure>
+
 
 
 

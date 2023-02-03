@@ -1618,7 +1618,16 @@ const editingModel = (function() {
     draw(canvasController) {
       const renderer = this.renderer, statechart = this.statechart, model = this.model;
       if (canvasController === this.canvasController) {
-        const ctx = this.canvasController.getCtx();
+        // Draw a dashed border around the canvas.
+        const ctx = canvasController.getCtx(),
+              size = canvasController.getSize();
+        ctx.strokeStyle = this.theme.strokeColor;
+        ctx.lineWidth = 0.5;
+        ctx.setLineDash([6, 3]);
+        ctx.strokeRect(0, 0, size.width, size.height);
+        ctx.setLineDash([]);
+
+        // Now draw the statechart.
         renderer.begin(ctx);
         this.updateLayout_();
         canvasController.applyTransform();
@@ -1930,7 +1939,7 @@ const editingModel = (function() {
             dy = cp.y - cp0.y,
             mouseHitInfo = this.mouseHitInfo,
             snapshot = transactionModel.getSnapshot(dragItem),
-            hitList = this.hitTestCanvas(p);
+            hitList = this.hitTestCanvas(cp);
       let hitInfo;
       switch (drag.type) {
         case copyPaletteItem:

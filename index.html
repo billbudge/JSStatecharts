@@ -7,7 +7,7 @@
 </head>
 <body id="body" z-index="0">
 
-<canvas id="palette" style="position:absolute; z-index:1"></canvas>
+<canvas id="palette" style="position:absolute; z-index:1;"></canvas>
 <canvas id="canvas" style="position:absolute; z-index:0"></canvas>
 
 <script src="JSAppFramework/base.js"></script>
@@ -39,11 +39,14 @@
   statechartEditor.setModel(statechartModel);
 
   document.bgColor = theme.bgColor;
+  palette.style.backgroundColor = theme.altBgColor;
+  canvas.style.backgroundColor = theme.bgColor;
 
   canvasController.configure([statechartEditor]);
   canvasController.setSize(window.innerWidth, window.innerHeight);
   paletteController.configure([statechartEditor]);
   paletteController.setSize(150, 100);
+  paletteController.draggable = true;
 
   window.onbeforeunload = function() {
     return "Are you sure you want to navigate away?";

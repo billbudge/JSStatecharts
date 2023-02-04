@@ -40,6 +40,9 @@
 
   document.bgColor = theme.bgColor;
   palette.style.backgroundColor = theme.altBgColor;
+  palette.style.borderColor = theme.strokeColor;
+  palette.style.borderStyle = 'solid';
+  palette.style.borderWidth = '0.25px';
   canvas.style.backgroundColor = theme.bgColor;
 
   canvasController.configure([statechartEditor]);

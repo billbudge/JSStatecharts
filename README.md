@@ -48,7 +48,7 @@ Another simplified Statechart for a bank ATM.
   <img src="/resources/ATM_statechart2.svg"  alt="" title="Simplfied ATM statechart number 2.">
 </figure>
 
-As a stress test, the full Citizen Quart Multi-Alarm Statechart from Harel's paper.
+As a stress test, the full Citizen Quart Multi-Alarm Statechart from Harel's paper. In the paper, the concurrent superstates can have sub-statecharts laid out horizontally as well as vertically. This editor currently only supports vertical layout, so the diagram looks different, though the statechart represents the same behaviors.
 <figure>
   <img src="/resources/CitizenQuartMultiAlarm.svg"  alt="" title="Citizen Quartz Multi-alarm watch from David Harel's Statechart paper.">
 </figure>

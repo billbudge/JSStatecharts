@@ -421,8 +421,20 @@ const editingModel = (function() {
     },
 
     reduceSelection: function () {
-      const model = this.model;
-      model.selectionModel.set(model.hierarchicalModel.reduceSelection());
+      const self = this,
+            model = this.model,
+            selectionModel = model.selectionModel,
+            hierarchicalModel = model.hierarchicalModel;
+      // First, replace statecharts by their parent state. We do this by adding parent
+      // states to the selection before reducing.
+      selectionModel.contents().forEach(function(item) {
+        if (isStatechart(item)) {
+          const parent = self.getParent(item);
+          if (parent)
+            selectionModel.add(parent);
+        }
+      });
+      selectionModel.set(hierarchicalModel.reduceSelection());
     },
 
     selectInteriorTransitions: function() {
@@ -917,7 +929,7 @@ const editingModel = (function() {
       let width = 0, height = lineSpacing;
 
       const statecharts = state.items;
-      let stateOffsetY = 0; // start at the top of the state shape.
+      let stateOffsetY = lineSpacing; // start at the bottom of the state label area.
       if (statecharts && statecharts.length > 0) {
         // Layout the child statecharts vertically within the parent state.
         // TODO handle horizontal flow.
@@ -1100,7 +1112,7 @@ const editingModel = (function() {
 
           const items = state.items;
           if (items) {
-            let separatorY = y;
+            let separatorY = lineBase;
             for (var i = 0; i < items.length - 1; i++) {
               const statechart = items[i];
               separatorY += statechart.height;
@@ -1212,15 +1224,24 @@ const editingModel = (function() {
       return diagrams.hitTestDisk(x + r, y + r, r, p, tol);
     }
     drawStatechart(statechart, mode) {
+      const ctx = this.ctx,
+            theme = this.theme,
+            r = theme.radius,
+            textSize = theme.fontSize,
+            rect = this.getItemRect(statechart),
+            x = rect.x, y = rect.y, w = rect.width, h = rect.height;
       switch (mode) {
         case normalMode:
         case printMode:
-        case highlightMode:
+          if (statechart.name) {
+            ctx.fillStyle = theme.textColor;
+            ctx.fillText(statechart.name, x + r, y + textSize);
+          }
           break;
+        case highlightMode:
         case hotTrackMode:
-          const ctx = this.ctx, theme = this.theme, r = theme.radius, rect = this.getItemRect(statechart), x = rect.x, y = rect.y, w = rect.width, h = rect.height;
           diagrams.roundRectPath(x, y, w, h, r, ctx);
-          ctx.strokeStyle = theme.hotTrackColor;
+          ctx.strokeStyle = mode === highlightMode ? theme.highlightColor : theme.hotTrackColor;
           ctx.lineWidth = 2;
           ctx.stroke();
           break;
@@ -1342,7 +1363,7 @@ const editingModel = (function() {
   }
 
   function isDraggable(hitInfo, model) {
-    return !isStatechart(hitInfo.item);
+    return true;//!isStatechart(hitInfo.item);
   }
 
   function isStateDropTarget(hitInfo, model) {
@@ -1474,6 +1495,15 @@ const editingModel = (function() {
             setter: setter,
           },
         ]);
+      propertyGridController.register('statechart',
+      [
+        {
+          label: 'name',
+          type: 'text',
+          getter: getter,
+          setter: setter,
+        },
+      ]);
       propertyGridController.register('transition',
         [
           {
@@ -1701,8 +1731,8 @@ const editingModel = (function() {
 
       const bounds = renderer.getBounds(states);
       // Adjust all edges 1 pixel out.
-      const ctx = new C2S(bounds.width * 2 + 4, bounds.height * 2 + 4);
-      ctx.scale(1.5, 1.5);
+      const ctx = new C2S(bounds.width + 2, bounds.height + 2);
+      // ctx.scale(1.5, 1.5);
       ctx.translate(-bounds.x + 2, -bounds.y + 2);
 
       renderer.begin(ctx);
@@ -1857,6 +1887,7 @@ const editingModel = (function() {
           case 'stop':
           case 'history':
           case 'history*':
+          case 'statechart':
             if (mouseHitInfo.inPalette) {
               drag = {
                 type: copyPaletteItem,

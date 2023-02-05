@@ -5,7 +5,6 @@
   "y": 0,
   "width": 676.047721862793,
   "height": 791.4942979812622,
-  "name": "Example",
   "items": [
     {
       "type": "state",

@@ -1460,19 +1460,19 @@ const editingModel = (function() {
       }
       function getter(info, item) {
         const attr = getAttr(info);
-        if (!item)
-          return '';
-        return item[attr] || '';
+        if (item)
+          return item[attr];
+        return '';
       }
       function setter(info, item, value) {
         const model = self.model, canvasController = self.canvasController;
-        if (!item)
-          return;
-        const attr = getAttr(info), description = 'change ' + attr;
-        model.transactionModel.beginTransaction(description);
-        model.observableModel.changeValue(item, attr, value);
-        model.transactionModel.endTransaction();
-        canvasController.draw();
+        if (item) {
+          const attr = getAttr(info), description = 'change ' + attr;
+          model.transactionModel.beginTransaction(description);
+          model.observableModel.changeValue(item, attr, value);
+          model.transactionModel.endTransaction();
+          canvasController.draw();
+        }
       }
       propertyGridController.register('state',
         [
@@ -2167,6 +2167,7 @@ const editingModel = (function() {
           case 86: // 'v'
             if (model.copyPasteModel.getScrap()) {
               editingModel.doPaste();
+              this.updateBounds_();
               return true;
             }
             return false;
@@ -2201,6 +2202,7 @@ const editingModel = (function() {
                     model = { root: statechart };
               self.initializeModel(model);
               self.setModel(model);
+              self.updateBounds_();
               self.canvasController.draw();
             }
             this.fileController.openFile().then(result => parse(result));
@@ -2232,6 +2234,5 @@ const statechart_data = {
   'y': 0,
   'width': 0,
   'height': 0,
-  'name': 'Example',
   'items': [],
 }

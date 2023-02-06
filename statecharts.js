@@ -1331,24 +1331,22 @@ const editingModel = (function() {
         hitInfo.item = item;
       return hitInfo;
     }
-    drawHoverText(item, p) {
-      const self = this, theme = this.theme, ctx = this.ctx, props = [];
-      this.model.dataModel.visitProperties(item, function (item, attr) {
-        const value = item[attr];
-        if (Array.isArray(value))
-          return;
-        props.push({ name: attr, value: value });
-      });
-      const textSize = theme.fontSize, gap = 16, border = 4, height = textSize * props.length + 2 * border, maxWidth = diagrams.measureNameValuePairs(props, gap, ctx) + 2 * border;
+    drawHoverText(item, p, nameValuePairs) {
+      const self = this, theme = this.theme, ctx = this.ctx;
+      const textSize = theme.fontSize,
+            gap = 16,
+            border = 4,
+            height = textSize * nameValuePairs.length + 2 * border,
+            maxWidth = diagrams.measureNameValuePairs(nameValuePairs, gap, ctx) + 2 * border;
       let x = p.x, y = p.y;
       ctx.fillStyle = theme.hoverColor;
       ctx.fillRect(x, y, maxWidth, height);
       ctx.fillStyle = theme.hoverTextColor;
-      props.forEach(function (prop) {
+      nameValuePairs.forEach(function (pair) {
         ctx.textAlign = 'left';
-        ctx.fillText(prop.name, x + border, y + textSize);
+        ctx.fillText(pair.name, x + border, y + textSize);
         ctx.textAlign = 'right';
-        ctx.fillText(prop.value, x + maxWidth - border, y + textSize);
+        ctx.fillText(pair.value, x + maxWidth - border, y + textSize);
         y += textSize;
       });
     }
@@ -1362,14 +1360,19 @@ const editingModel = (function() {
     return isState(hitInfo.item) && hitInfo.border;
   }
 
-  function isDraggable(hitInfo, model) {
-    return true;//!isStatechart(hitInfo.item);
-  }
-
   function isStateDropTarget(hitInfo, model) {
     const item = hitInfo.item;
     return isTrueStateOrStatechart(item) &&
           !model.hierarchicalModel.isItemInSelection(item);
+  }
+
+  function isClickable(hitInfo, model) {
+    return true;
+  }
+
+  function hasProperties(hitInfo, model) {
+    const item = hitInfo.item;
+    return isTrueState(item) || isStatechart(item) || isTransition(item);
   }
 
   const connectTransitionSrc = 1,
@@ -1474,57 +1477,58 @@ const editingModel = (function() {
           canvasController.draw();
         }
       }
-      propertyGridController.register('state',
-        [
-          {
-            label: 'name',
-            type: 'text',
-            getter: getter,
-            setter: setter,
-          },
-          {
-            label: 'entry',
-            type: 'text',
-            getter: getter,
-            setter: setter,
-          },
-          {
-            label: 'exit',
-            type: 'text',
-            getter: getter,
-            setter: setter,
-          },
-        ]);
-      propertyGridController.register('statechart',
-      [
+      this.propertyInfo = {};
+      this.propertyInfo.statechart = [
         {
           label: 'name',
           type: 'text',
           getter: getter,
           setter: setter,
         },
-      ]);
-      propertyGridController.register('transition',
-        [
-          {
-            label: 'event',
-            type: 'text',
-            getter: getter,
-            setter: setter,
-          },
-          {
-            label: 'guard',
-            type: 'text',
-            getter: getter,
-            setter: setter,
-          },
-          {
-            label: 'action',
-            type: 'text',
-            getter: getter,
-            setter: setter,
-          },
-        ]);
+      ];
+      this.propertyInfo.state = [
+        {
+          label: 'name',
+          type: 'text',
+          getter: getter,
+          setter: setter,
+        },
+        {
+          label: 'entry',
+          type: 'text',
+          getter: getter,
+          setter: setter,
+        },
+        {
+          label: 'exit',
+          type: 'text',
+          getter: getter,
+          setter: setter,
+        },
+      ];
+      this.propertyInfo.transition = [
+        {
+          label: 'event',
+          type: 'text',
+          getter: getter,
+          setter: setter,
+        },
+        {
+          label: 'guard',
+          type: 'text',
+          getter: getter,
+          setter: setter,
+        },
+        {
+          label: 'action',
+          type: 'text',
+          getter: getter,
+          setter: setter,
+        },
+      ];
+      propertyGridController.register('statechart', this.propertyInfo.statechart);
+      propertyGridController.register('state', this.propertyInfo.state);
+      propertyGridController.register('transition', this.propertyInfo.transition);
     }
     initializeModel(model) {
       const self = this;
@@ -1695,7 +1699,16 @@ const editingModel = (function() {
 
         const hoverHitInfo = this.hoverHitInfo;
         if (hoverHitInfo) {
-          renderer.drawHoverText(hoverHitInfo.item, hoverHitInfo.p);
+          const item = hoverHitInfo.item,
+                nameValuePairs = [];
+          for (let info of hoverHitInfo.propertyInfo) {
+            const name = info.label,
+                  value = info.getter(info, item);
+            if (value !== undefined && value !== undefined) {
+              nameValuePairs.push({ name, value });
+            }
+          }
+          renderer.drawHoverText(hoverHitInfo.item, hoverHitInfo.p, nameValuePairs);
         }
         renderer.end();
       } else if (canvasController === this.paletteController) {
@@ -1833,7 +1846,7 @@ const editingModel = (function() {
         hitList = this.hitTestCanvas(cp);
         inPalette = false;
       }
-      const mouseHitInfo = this.mouseHitInfo = this.getFirstHit(hitList, isDraggable);
+      const mouseHitInfo = this.mouseHitInfo = this.getFirstHit(hitList, isClickable);
       if (mouseHitInfo) {
         const item = mouseHitInfo.item;
         if (inPalette) {
@@ -2111,12 +2124,13 @@ const editingModel = (function() {
       const model = this.model,
             p = canvasController.getCurrentPointerPosition(),
             hitList = this.hitTestCanvas(p),
-            hoverHitInfo = this.getFirstHit(hitList, isDraggable);
+            hoverHitInfo = this.hoverHitInfo = this.getFirstHit(hitList, hasProperties);
       if (!hoverHitInfo)
         return false;
-      const cp = canvasController.viewToCanvas(p);
 
+      const cp = canvasController.viewToCanvas(p);
       hoverHitInfo.p = cp;
+      hoverHitInfo.propertyInfo = this.propertyInfo[hoverHitInfo.item.type];
       this.hoverHitInfo = hoverHitInfo;
       return true;
     }

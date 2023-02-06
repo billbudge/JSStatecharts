@@ -40,12 +40,12 @@ States and transitions can be selected by the user. The Shift and Control/Comman
 
 A simplified Statechart for a bank ATM.
 <figure>
-  <img src="/resources/ATM_statechart.svg"  alt="" title="Simplfied ATM statechart.">
+  <img src="/resources/ATM.svg"  alt="" title="Simplfied ATM statechart.">
 </figure>
 
 Another simplified Statechart for a bank ATM.
 <figure>
-  <img src="/resources/ATM_statechart2.svg"  alt="" title="Simplfied ATM statechart number 2.">
+  <img src="/resources/ATM2.svg"  alt="" title="Simplfied ATM statechart number 2.">
 </figure>
 
 As a stress test, the full Citizen Quart Multi-Alarm Statechart from Harel's paper. In the paper, the concurrent superstates can have sub-statecharts laid out horizontally as well as vertically. This editor currently only supports vertical layout, so the diagram looks different, though the statechart represents the same behaviors.

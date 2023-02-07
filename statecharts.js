@@ -106,8 +106,8 @@ function extendTheme(theme) {
     knobbyRadius: 4,
     padding: 8,
 
-    stateMinWidth: 100,
-    stateMinHeight: 60,  // TODO make sure there's room for entry/exit action text
+    stateMinWidth: 75,
+    stateMinHeight: 40,  // TODO make sure there's room for entry/exit action text
 
     // Rather than try to render actual text for H and H* into the pseudostate disk,
     // render the glyphs as moveto/lineto pairs.
@@ -1370,6 +1370,10 @@ const editingModel = (function() {
     return true;
   }
 
+  function isDraggable(hitInfo, model) {
+    return isState(hitInfo.item);
+  }
+
   function hasProperties(hitInfo, model) {
     const item = hitInfo.item;
     return isTrueState(item) || isStatechart(item) || isTransition(item);
@@ -1824,6 +1828,15 @@ const editingModel = (function() {
       }
       return null;
     }
+    getDraggableAncestor(hitList, hitInfo) {
+      const model = this.model,
+            hierarchicalModel = model.hierarchicalModel;
+      while (!isDraggable(hitInfo, model)) {
+        const parent = hierarchicalModel.getParent(hitInfo.item);
+        hitInfo = this.getFirstHit(hitList, info => { return info.item === parent; })
+      }
+      return hitInfo;
+    }
     setPropertyGrid() {
       const model = this.model,
             item = model.selectionModel.lastSelected(),
@@ -1848,6 +1861,7 @@ const editingModel = (function() {
       }
       const mouseHitInfo = this.mouseHitInfo = this.getFirstHit(hitList, isClickable);
       if (mouseHitInfo) {
+        mouseHitInfo.draggableAncestor = this.getDraggableAncestor(hitList, mouseHitInfo);
         const item = mouseHitInfo.item;
         if (inPalette) {
           mouseHitInfo.inPalette = true;
@@ -1867,14 +1881,14 @@ const editingModel = (function() {
       return mouseHitInfo !== null;
     }
     onBeginDrag(canvasController) {
-      const mouseHitInfo = this.mouseHitInfo;
+      let mouseHitInfo = this.mouseHitInfo;
       if (!mouseHitInfo)
         return false;
       const model = this.model,
             editingModel = model.editingModel,
             selectionModel = model.selectionModel,
-            dragItem = mouseHitInfo.item,
             p0 = canvasController.getInitialPointerPosition();
+      let dragItem = mouseHitInfo.item;
       let drag, newTransition;
       if (mouseHitInfo.arrow) {
         const stateId = model.dataModel.getId(dragItem),
@@ -1894,12 +1908,14 @@ const editingModel = (function() {
         };
       } else {
         switch (dragItem.type) {
+          case 'statechart':
           case 'state':
           case 'start':
           case 'stop':
           case 'history':
           case 'history*':
-          case 'statechart':
+            mouseHitInfo = mouseHitInfo.draggableAncestor;
+            dragItem = mouseHitInfo.item;
             if (mouseHitInfo.inPalette) {
               drag = {
                 type: copyPaletteItem,
@@ -2191,7 +2207,34 @@ const editingModel = (function() {
           case 72: // 'h'
             editingModel.doTogglePalette();
             return true;
-
+          case 78: { // 'n'   /// Can't intercept this key combo
+            const statechart = {
+              'type': 'statechart',
+              'id': 1,
+              'x': 0,
+              'y': 0,
+              'width': 0,
+              'height': 0,
+              'items': [],
+            }
+            model = { root: statechart };
+            self.setModel(model);
+            self.updateBounds_();
+            self.canvasController.draw();
+            return true;
+          }
+          case 79: { // 'o'
+            function parse(text) {
+              const statechart = JSON.parse(text),
+                    model = { root: statechart };
+              self.initializeModel(model);
+              self.setModel(model);
+              self.updateBounds_();
+              self.canvasController.draw();
+            }
+            this.fileController.openFile().then(result => parse(result));
+            return true;
+          }
           case 83: { // 's'
             let text = JSON.stringify(
               statechart,
@@ -2208,18 +2251,6 @@ const editingModel = (function() {
             // Writes statechart as JSON.
             this.fileController.saveUnnamedFile(text).then();
             // console.log(text);
-            return true;
-          }
-          case 79: { // 'o'
-            function parse(text) {
-              const statechart = JSON.parse(text),
-                    model = { root: statechart };
-              self.initializeModel(model);
-              self.setModel(model);
-              self.updateBounds_();
-              self.canvasController.draw();
-            }
-            this.fileController.openFile().then(result => parse(result));
             return true;
           }
           case 80: { // 'p'
